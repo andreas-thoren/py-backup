@@ -1,10 +1,9 @@
 """Contains utility functions used by core.py"""
-import pathlib
 import platform
 import subprocess
 
 
-def sync(source: pathlib.Path, destination: pathlib.Path, options: list) -> None:
+def sync(source: str, destination: str, options: list | None = None) -> None:
     # Get the system's platform string
     system_platform = platform.system()
 
@@ -25,7 +24,7 @@ def sync(source: pathlib.Path, destination: pathlib.Path, options: list) -> None
 
 
 def rsync(
-    source: pathlib.Path, destination: pathlib.Path, options: list | None
+    source: str, destination: str, options: list | None = None
 ) -> subprocess.CompletedProcess | None:
     """Calls rsync(options, source, destination) through subprocess run.
 
@@ -39,12 +38,18 @@ def rsync(
         from subprocess.run if there is one else None.
     """
 
+    # If user has provided options make a copy of them (to avoid mutating original list)
+    # If no options are provided set arglist equal to empty list
     arglist = options[:] if options else []
+    arglist = ["rsync"] + arglist
     arglist.append(source)
     arglist.append(destination)
-    completed_process = subprocess.run(arglist, text=True, capture_output=True)
-    return completed_process.returncode if completed_process else None
 
-
-if __name__ == "__main__":
-    sync()
+    try:
+        completed_process = subprocess.run(arglist, text=True, capture_output=True)
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            "rsync does not seem to be installed on your system (or path is not set)!\n"
+            + "Install rsync or fix path for program to work."
+        )
+    return completed_process if completed_process else None
