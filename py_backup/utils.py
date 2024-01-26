@@ -29,8 +29,8 @@ def rsync(
     """Calls rsync(options, source, destination) through subprocess run.
 
     Args:
-        source (pathlib.Path): Source folder/file
-        destination (pathlib.Path): Destination folder/file
+        source (str): Source folder/file
+        destination (str): Destination folder/file
         options (list): Args list to be passed on to rsync, robocopy etc
 
     Returns:
