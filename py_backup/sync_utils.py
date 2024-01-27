@@ -4,7 +4,7 @@ import subprocess
 
 
 def sync(source: str, destination: str, options: list | None = None, subprocess_kwargs: dict | None = None) -> None:
-    kwargs = subprocess_kwargs if subprocess_kwargs else {}
+    kwargs = subprocess_kwargs.copy() if subprocess_kwargs else {}
     
     # Remove shell key if exists since shell calls with subprocess.run are not allowed.
     kwargs.pop("shell", None)
