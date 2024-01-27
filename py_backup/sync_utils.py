@@ -14,7 +14,7 @@ def sync(source: str, destination: str, options: list | None = None, subprocess_
 
     # Deduce which os the user runs and call the appropriate function
     if system_platform == "Linux":
-        rsync(source, destination, options, subprocess_kwargs)
+        rsync(source, destination, options, kwargs)
     elif system_platform == "Windows":
         # TODO Implement this via robocopy. Will require mappings of options (dict)
         raise NotImplementedError(f"Functionality for Windows is not implemented!")
