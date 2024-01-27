@@ -74,8 +74,7 @@ def get_filtered_args(args: list, unwanted_args: set | None = None) -> list:
         list: deduplicated list without unwanted args with initial order intact
     """
 
-    args_dict = { key: None for key in args }
     excl = unwanted_args if unwanted_args else set()
-    filtered_args_dict = { key: None for key in args_dict if key not in excl }
+    filtered_args_dict = { key: None for key in args if key not in excl }
     return list(filtered_args_dict)
     
