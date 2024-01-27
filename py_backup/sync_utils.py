@@ -30,7 +30,7 @@ def sync(source: str, destination: str, options: list | None = None, subprocess_
 
 def rsync(
     source: str, destination: str, options: list | None = None, subprocess_kwargs: dict | None = None
-) -> subprocess.CompletedProcess | None:
+) -> subprocess.CompletedProcess:
     """Calls rsync(options, source, destination) through subprocess run.
 
     Args:
@@ -41,7 +41,7 @@ def rsync(
 
     Returns:
         subprocess.CompletedProcess: returns CompletedProcess instance
-        from subprocess.run if there is one else None.
+        from subprocess.run.
     """
 
     # Create/filter args list to pass to subprocess.run
@@ -62,19 +62,20 @@ def rsync(
 
     return completed_process
 
-def get_filtered_args(args: list, unwanted_args: set) -> list:
+def get_filtered_args(args: list, unwanted_args: set | None = None) -> list:
     """Short function to remove duplicate args and remove unwanted_args while
     maintaining args list order (if duplicate first position is kept).
 
     Args:
         args (list): Unfiltered args list
-        unwanted_args (set): Set of unwanted args to remove
+        unwanted_args (set): Set of unwanted args to remove. Defaults to None if not provided.
 
     Returns:
         list: deduplicated list without unwanted args with initial order intact
     """
 
     args_dict = { key: "" for key in args }
-    filtered_args_dict = { key: "" for key in args_dict if key not in unwanted_args }
+    excl = unwanted_args if unwanted_args else set()
+    filtered_args_dict = { key: "" for key in args_dict if key not in excl }
     return list(filtered_args_dict)
     
