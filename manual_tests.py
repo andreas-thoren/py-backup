@@ -1,5 +1,4 @@
-from py_backup.sync_utils import rsync
+from py_backup.sync_utils import sync
 
-#output = rsync("entry.py", "tests/entry.py", ["-a", "--itemize-changes"], {"text": True, "capture_output": True})
-completed_process = rsync("entry.py", "tests/entry.py", ["rsync", "-a", "--itemize-changes", "entry.py"])
-print(completed_process)
+# sync("entry.py", "tests/entry.py", ["-a", "--itemize-changes"], {"text": True, "capture_output": True})
+sync("entry.py", "tests/entry.py", ["rsync", "-a", "--itemize-changes", "entry.py"])
