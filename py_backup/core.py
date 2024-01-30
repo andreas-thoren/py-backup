@@ -150,8 +150,8 @@ def robocopy(
         completed_process = subprocess.run(args, **sanitized_subprocess_kwargs)
     except FileNotFoundError:
         raise FileNotFoundError(
-            "rsync does not seem to be installed on your system (or path is not set)!\n"
-            + "Install rsync or fix path for program to work."
+            "robocopy does not seem to be installed on your system (or path is not set)!\n"
+            + "Install robocopy or fix path for program to work."
         )
 
     return completed_process
