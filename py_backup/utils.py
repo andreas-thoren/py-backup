@@ -43,7 +43,7 @@ def get_rsync_defaults(
     # Trailing slashes are importent in rsync call for consistent behaviour
     src_string = str(source) + "/"
     dst_string = str(destination) + "/"
-    opts = default_options.get("rsync", []).copy()
+    opts = default_options["rsync"].copy()
 
     if delete:
         opts.append("--delete")
@@ -64,13 +64,19 @@ def get_robocopy_defaults(
     dry_run: bool = False,
 ) -> tuple[str, str, list[str] | None, dict | None]:
 
-    src_string = str(source) + "/"
-    dst_string = str(destination) + "/"
-    opts = default_options.get("robocopy", []).copy()
+    src_string = str(source)
+    dst_string = str(destination)
+    opts = default_options["robocopy"].copy()
 
-    # TODO add logic here
+    if delete:
+        opts.append("/PURGE")
+    if dry_run:
+        opts.append("/L")
+    if backup_dir:
+        opts.append("/BACKUP")
+        opts.append("/BACKUPDIR:" + str(backup_dir))
 
-    return (str(source), str(destination), [], {})
+    return (src_string, dst_string, opts, {})
 
 
 def get_filtered_args(args: list, unwanted_args: set | None = None) -> list:

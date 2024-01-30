@@ -118,7 +118,39 @@ def robocopy(
     subprocess_kwargs: dict | None = None,
 ) -> None:
 
-    # TODO
-    raise NotImplementedError(
-        "robocopy will be implemented in the future but not now..."
-    )
+    # Create/filter args list to pass to subprocess.run
+    args = options.copy() if options else []
+    backup = False
+    backup_dir = ""
+    
+    for i in range(len(args)-1,-1,-1):
+        option = args[i]
+        if option.upper() == "/BACKUP":
+            del args[i]
+            backup = True
+        elif option.upper().startswith("/BACKUPDIR:"):
+            backup_dir = args.pop(i)[11:]
+
+    if backup:
+        raise NotImplementedError("The backup function in robocopy is not yet implemented!")
+        # TODO write python function that handles actual backup
+
+    args = get_filtered_args(args, {"robocopy", source, destination})
+    args = ["robocopy"] + [source, destination] + args
+
+    # Ensure kwargs is dict if rsync is called directly
+    kwargs = subprocess_kwargs.copy() if subprocess_kwargs else {}
+    sanitized_subprocess_kwargs = sanitize_subprocess_kwargs(kwargs)
+    
+    # TODO remove return statement below when function is tested.
+    return
+
+    try:
+        completed_process = subprocess.run(args, **sanitized_subprocess_kwargs)
+    except FileNotFoundError:
+        raise FileNotFoundError(
+            "rsync does not seem to be installed on your system (or path is not set)!\n"
+            + "Install rsync or fix path for program to work."
+        )
+    
+    return completed_process

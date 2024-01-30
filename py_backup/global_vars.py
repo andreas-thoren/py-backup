@@ -5,4 +5,5 @@
 # handled by get_rsync_defaults
 default_options = {
     "rsync": ["-a", "-i", "-v", "-h"],
+    "robocopy": ["/E", "/DCOPY:DAT", "/COPY:DAT", "/R:3", "/W:1"],
 }
