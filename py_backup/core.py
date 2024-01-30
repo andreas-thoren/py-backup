@@ -14,7 +14,7 @@ def folder_backup(
     dry_run: bool = False,
 ) -> None:
     """
-    Purpose of this function is to provide a higer level interface to 
+    Purpose of this function is to provide a higer level interface to
     rsync/robocopy functions where default options are provided. In the case of robocopy
     it also extends its functionality so that you can backup files to be
     deleted/overwritten to a specified dir. rsync provides this functionality natively
@@ -36,7 +36,7 @@ def folder_backup(
         ValueError: If source or destination does not point to existing dirs.
         NotImplementedError: If using backup_func not working with this function.
     """
-    
+
     # Make sure that source and destination are specified since Path("") -> Path(".")
     # I want user to have to specify dir!
     if not (source and destination):
@@ -53,7 +53,7 @@ def folder_backup(
         backup_dir = None
     elif isinstance(backup_dir, str):
         backup_dir = Path(backup_dir).resolve()
-    else: # backup_dir is Path. Resolve it
+    else:  # backup_dir is Path. Resolve it
         backup_dir = backup_dir.resolve()
 
     # Checks if paths are valid dir paths!
@@ -61,9 +61,9 @@ def folder_backup(
         raise ValueError(f"{str(source)} is not the path to an existing dir")
     if not destination.is_dir():
         raise ValueError(f"{str(destination)} is not the path to an existing dir")
-    
+
     func_name = backup_func.__name__
-    
+
     # Call helper functions for choosen sync function
     # where default argument lists are created.
     if func_name == "rsync":
@@ -99,7 +99,7 @@ def _rsync_backup(
     # ends with "/". Otherwise source dir will be added to content of destination dir..
     src_string = str(source) + "/"
     dst_string = str(destination) + "/"
-    
+
     # Call rsync function
     rsync(src_string, dst_string, opts)
 
@@ -152,7 +152,9 @@ def _robocopy_backup(
     dry_run: bool = False,
 ) -> None:
 
-    raise NotImplementedError("robocopy will be implemented in the future but not now...")
+    raise NotImplementedError(
+        "robocopy will be implemented in the future but not now..."
+    )
 
 
 def robocopy(
