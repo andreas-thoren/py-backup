@@ -138,6 +138,8 @@ def robocopy(
             "The backup function in robocopy is not yet implemented!"
         )
         # TODO write python function that handles actual backup
+    elif backup or backup_dir:
+        raise ValueError("If either '/BACKUP' or '/BACKUPDIR' is used the other must be set too.")
 
     args = get_filtered_args(args, {"robocopy", source, destination})
     args = ["robocopy"] + [source, destination] + args
