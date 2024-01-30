@@ -4,8 +4,8 @@ from py_backup.core import folder_backup
 
 
 def get_mock_func() -> callable:
-    mock_backup_func = Mock(name='MockedFunction')
-    mock_backup_func.__name__ = 'MockedFunction'
+    mock_backup_func = Mock(name="MockedFunction")
+    mock_backup_func.__name__ = "MockedFunction"
     return mock_backup_func
 
 

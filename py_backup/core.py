@@ -6,7 +6,9 @@ from .utils import get_default_args, get_filtered_args, sanitize_subprocess_kwar
 
 
 def folder_backup(
-    backup_func: Callable[[str, str, list[str] | None, dict | None], subprocess.CompletedProcess],
+    backup_func: Callable[
+        [str, str, list[str] | None, dict | None], subprocess.CompletedProcess
+    ],
     source: str | Path,
     destination: str | Path,
     backup_dir: str | Path = "",
@@ -122,8 +124,8 @@ def robocopy(
     args = options.copy() if options else []
     backup = False
     backup_dir = ""
-    
-    for i in range(len(args)-1,-1,-1):
+
+    for i in range(len(args) - 1, -1, -1):
         option = args[i]
         if option.upper() == "/BACKUP":
             del args[i]
@@ -132,7 +134,9 @@ def robocopy(
             backup_dir = args.pop(i)[11:]
 
     if backup:
-        raise NotImplementedError("The backup function in robocopy is not yet implemented!")
+        raise NotImplementedError(
+            "The backup function in robocopy is not yet implemented!"
+        )
         # TODO write python function that handles actual backup
 
     args = get_filtered_args(args, {"robocopy", source, destination})
@@ -141,7 +145,7 @@ def robocopy(
     # Ensure kwargs is dict if rsync is called directly
     kwargs = subprocess_kwargs.copy() if subprocess_kwargs else {}
     sanitized_subprocess_kwargs = sanitize_subprocess_kwargs(kwargs)
-    
+
     # TODO remove return statement below when function is tested.
     return
 
@@ -152,5 +156,5 @@ def robocopy(
             "rsync does not seem to be installed on your system (or path is not set)!\n"
             + "Install rsync or fix path for program to work."
         )
-    
+
     return completed_process

@@ -4,6 +4,7 @@ from py_backup import rsync, robocopy, folder_backup
 # sync("entry.py", "tests/entry.py", ["-a", "--itemize-changes"], {"text": True, "capture_output": True})
 # rsync("entry.py", "tests/entry.py", ["rsync", "-a", "--itemize-changes", "entry.py"])
 
+
 def test_rsync_folder_backup():
     folder_backup(
         rsync,
@@ -13,6 +14,7 @@ def test_rsync_folder_backup():
         delete=False,
         dry_run=True,
     )
+
 
 def test_robocopy_folder_backup():
     folder_backup(
