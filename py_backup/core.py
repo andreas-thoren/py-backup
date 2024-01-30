@@ -122,24 +122,18 @@ def robocopy(
 
     # Create/filter args list to pass to subprocess.run
     args = options.copy() if options else []
-    backup = False
     backup_dir = ""
 
     for i in range(len(args) - 1, -1, -1):
         option = args[i]
-        if option.upper() == "/BACKUP":
-            del args[i]
-            backup = True
-        elif option.upper().startswith("/BACKUPDIR:"):
-            backup_dir = args.pop(i)[11:]
+        if option.upper().startswith("/BACKUP:"):
+            backup_dir = args.pop(i)[8:]
 
-    if backup and backup_dir:
+    if backup_dir:
         raise NotImplementedError(
             "The backup function in robocopy is not yet implemented!"
         )
         # TODO write python function that handles actual backup
-    elif backup or backup_dir:
-        raise ValueError("If either '/BACKUP' or '/BACKUPDIR' is used the other must be set too.")
 
     args = get_filtered_args(args, {"robocopy", source, destination})
     args = ["robocopy"] + [source, destination] + args

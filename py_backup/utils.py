@@ -73,8 +73,7 @@ def get_robocopy_defaults(
     if dry_run:
         opts.append("/L")
     if backup_dir:
-        opts.append("/BACKUP")
-        opts.append("/BACKUPDIR:" + str(backup_dir))
+        opts.append("/BACKUP:" + str(backup_dir))
 
     return (src_string, dst_string, opts, {})
 
