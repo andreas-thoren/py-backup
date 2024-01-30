@@ -8,6 +8,6 @@ folder_backup(
     "tests/folder1/",
     "tests/folder2/",
     backup_dir="tests/backup_dir",
-    delete=True,
-    dry_run=False,
+    delete=False,
+    dry_run=True,
 )

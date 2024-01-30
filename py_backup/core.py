@@ -1,12 +1,12 @@
 """The core functions exposed directly in py_backup"""
 import subprocess
 from pathlib import Path
-from .utils import get_filtered_args, sanitize_subprocess_kwargs
-from .global_vars import default_options
+from typing import Callable
+from .utils import get_default_args, get_filtered_args, sanitize_subprocess_kwargs
 
 
 def folder_backup(
-    backup_func: callable,
+    backup_func: Callable[[str, str, list[str] | None, dict | None], None],
     source: str | Path,
     destination: str | Path,
     backup_dir: str | Path = "",
@@ -37,18 +37,18 @@ def folder_backup(
         NotImplementedError: If using backup_func not working with this function.
     """
 
-    # Make sure that source and destination are specified since Path("") -> Path(".")
+    # 1. Make sure that source and destination are specified since Path("") -> Path(".")
     # I want user to have to specify dir!
     if not (source and destination):
         raise ValueError("You need to specify source and destination!")
 
-    # Make sure all dirs are converted to Paths if not already
+    # 2. Make sure source and destination dirs are resolved Paths
     source = Path(source) if isinstance(source, str) else source
     destination = Path(destination) if isinstance(destination, str) else destination
     source = source.resolve()
     destination = destination.resolve()
 
-    # Convert backup_dir to a Path object if it's a non-empty string. Resolve path.
+    # 3. Convert backup_dir to a Path object if it's a non-empty string. Resolve path.
     if not backup_dir:
         backup_dir = None
     elif isinstance(backup_dir, str):
@@ -56,44 +56,20 @@ def folder_backup(
     else:  # backup_dir is Path. Resolve it
         backup_dir = backup_dir.resolve()
 
-    # Checks if paths are valid dir paths!
+    # 4. Checks if source and destination are valid dir paths!
     if not source.is_dir():
         raise ValueError(f"{str(source)} is not the path to an existing dir")
     if not destination.is_dir():
         raise ValueError(f"{str(destination)} is not the path to an existing dir")
 
+    # 5. Get function name and get default args for subsequent function call.
     func_name = backup_func.__name__
+    src, dst, opts, kwargs = get_default_args(
+        func_name, source, destination, backup_dir, delete, dry_run
+    )
 
-    # Call the actual syncing functions below.
-    if func_name == "rsync":
-        options = _get_rsync_options(backup_dir, delete, dry_run)
-        # Important for subsequent rsync call that folder paths ends with "/"
-        src_string = str(source) + "/"
-        dst_string = str(destination) + "/"
-        rsync(src_string, dst_string, options)
-    elif func_name == "robocopy":
-        # TODO implement functionality in _robocopy_backup.
-        raise NotImplementedError(
-            "robocopy will be implemented in the future but not now..."
-        )
-    else:
-        raise NotImplementedError(f"{func_name} is not a valid backup_function")
-
-
-def _get_rsync_options(
-    backup_dir: Path | None,
-    delete: bool = False,
-    dry_run: bool = False,
-):
-    opts = default_options.get("rsync", []).copy()
-    if delete:
-        opts.append("--delete")
-    if dry_run:
-        opts.append("--dry-run")
-    if backup_dir:
-        opts.append("--backup")
-        opts.append("--backup-dir=" + str(backup_dir))
-    return opts
+    # 6. Call the function which does the actual backup.
+    backup_func(src, dst, opts, kwargs)
 
 
 def rsync(
@@ -143,4 +119,6 @@ def robocopy(
 ) -> None:
 
     # TODO
-    pass
+    raise NotImplementedError(
+        "robocopy will be implemented in the future but not now..."
+    )
