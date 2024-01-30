@@ -6,13 +6,13 @@ from .utils import get_default_args, get_filtered_args, sanitize_subprocess_kwar
 
 
 def folder_backup(
-    backup_func: Callable[[str, str, list[str] | None, dict | None], None],
+    backup_func: Callable[[str, str, list[str] | None, dict | None], subprocess.CompletedProcess],
     source: str | Path,
     destination: str | Path,
     backup_dir: str | Path = "",
     delete: bool = False,
     dry_run: bool = False,
-) -> None:
+) -> subprocess.CompletedProcess:
     """
     Purpose of this function is to provide a higer level interface to
     rsync/robocopy functions where default options are provided. In the case of robocopy
@@ -69,7 +69,7 @@ def folder_backup(
     )
 
     # 6. Call the function which does the actual backup.
-    backup_func(src, dst, opts, kwargs)
+    return backup_func(src, dst, opts, kwargs)
 
 
 def rsync(
@@ -116,7 +116,7 @@ def robocopy(
     destination: str,
     options: list[str] | None = None,
     subprocess_kwargs: dict | None = None,
-) -> None:
+) -> subprocess.CompletedProcess:
 
     # TODO
     raise NotImplementedError(
