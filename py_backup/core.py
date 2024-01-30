@@ -146,9 +146,6 @@ def robocopy(
     kwargs = subprocess_kwargs.copy() if subprocess_kwargs else {}
     sanitized_subprocess_kwargs = sanitize_subprocess_kwargs(kwargs)
 
-    # TODO remove return statement below when function is tested.
-    return
-
     try:
         completed_process = subprocess.run(args, **sanitized_subprocess_kwargs)
     except FileNotFoundError:
