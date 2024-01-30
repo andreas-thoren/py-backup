@@ -64,28 +64,28 @@ def folder_backup(
 
     func_name = backup_func.__name__
 
-    # Call helper functions for choosen sync function
-    # where default argument lists are created.
+    # Call the actual syncing functions below.
     if func_name == "rsync":
-        _rsync_backup(source, destination, backup_dir, delete, dry_run)
+        options = _get_rsync_options(backup_dir, delete, dry_run)
+        # Important for subsequent rsync call that folder paths ends with "/"
+        src_string = str(source) + "/"
+        dst_string = str(destination) + "/"
+        rsync(src_string, dst_string, options)
     elif func_name == "robocopy":
         # TODO implement functionality in _robocopy_backup.
-        _robocopy_backup(source, destination, backup_dir, delete, dry_run)
+        raise NotImplementedError(
+            "robocopy will be implemented in the future but not now..."
+        )
     else:
         raise NotImplementedError(f"{func_name} is not a valid backup_function")
 
 
-def _rsync_backup(
-    source: Path,
-    destination: Path,
+def _get_rsync_options(
     backup_dir: Path | None,
     delete: bool = False,
     dry_run: bool = False,
 ):
-
     opts = default_options.get("rsync", []).copy()
-
-    # Add desired options passed to rsync function
     if delete:
         opts.append("--delete")
     if dry_run:
@@ -93,15 +93,7 @@ def _rsync_backup(
     if backup_dir:
         opts.append("--backup")
         opts.append("--backup-dir=" + str(backup_dir))
-
-    # pathlib.Path string representation of dirs always adds without a "/"
-    # For rsync it's very important that passed string paths for source
-    # ends with "/". Otherwise source dir will be added to content of destination dir..
-    src_string = str(source) + "/"
-    dst_string = str(destination) + "/"
-
-    # Call rsync function
-    rsync(src_string, dst_string, opts)
+    return opts
 
 
 def rsync(
@@ -143,25 +135,12 @@ def rsync(
     return completed_process
 
 
-def _robocopy_backup(
-    source: Path,
-    destination: Path,
-    options: list,
-    backup_dir: Path | None,
-    delete: bool = False,
-    dry_run: bool = False,
-) -> None:
-
-    raise NotImplementedError(
-        "robocopy will be implemented in the future but not now..."
-    )
-
-
 def robocopy(
     source: str,
     destination: str,
     options: list[str] | None = None,
     subprocess_kwargs: dict | None = None,
 ) -> None:
+
     # TODO
     pass
