@@ -64,12 +64,12 @@ def folder_backup(
 
     # 5. Get function name and get default args for subsequent function call.
     func_name = backup_func.__name__
-    src, dst, opts, kwargs = get_default_args(
+    src, dst, opts, subprocess_kwargs = get_default_args(
         func_name, source, destination, backup_dir, delete, dry_run
     )
 
     # 6. Call the function which does the actual backup.
-    return backup_func(src, dst, opts, kwargs)
+    return backup_func(src, dst, opts, subprocess_kwargs)
 
 
 def rsync(
