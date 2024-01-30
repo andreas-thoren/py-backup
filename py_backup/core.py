@@ -133,7 +133,7 @@ def robocopy(
         elif option.upper().startswith("/BACKUPDIR:"):
             backup_dir = args.pop(i)[11:]
 
-    if backup:
+    if backup and backup_dir:
         raise NotImplementedError(
             "The backup function in robocopy is not yet implemented!"
         )
