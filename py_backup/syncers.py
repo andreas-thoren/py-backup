@@ -48,28 +48,20 @@ class SyncBase:
             unwanted_args (set, optional): Set of unwanted args to remove. Defaults to None.
 
         Returns:
-            list: Deduplicated list without unwanted args with initial order intact
+            list: Deduplicated list without unwanted args and initial order intact
         """
-        excl = unwanted_args or set()
-        args_dict = {}
-        i = 0
-
-        for option in args:
-            if option not in excl:
-                args_dict.setdefault(option, []).append(i)
-                i += 1
+        excl = unwanted_args.copy() if unwanted_args else set()
+        filtered_args = []
         
-        if not duplicates_allowed:
-            return [ key for key in args_dict ]
+        for arg in args:
+            if arg in excl:
+                continue
 
-        ordered_args = []
-        for key, indices in args_dict.items():
-            for index in indices:
-                if len(ordered_args) <= index:
-                    ordered_args.extend([None] * (index + 1 - len(ordered_args)))
-                ordered_args[index] = key
+            filtered_args.append(arg)
+            if not duplicates_allowed:
+                excl.add(arg)
 
-        return ordered_args
+        return filtered_args
 
     @staticmethod
     def sanitize_subprocess_kwargs(kwargs: dict | None) -> dict:
@@ -151,7 +143,18 @@ class Robocopy(SyncBase):
     def get_args(
         self, options: list, delete: bool, dry_run: bool
     ) -> tuple[str, str, list[str]]:
-        pass
+        src_string = str(self.src)
+        dst_string = str(self.dst)
+        opts = options.copy()
+
+        if delete:
+            opts.append("/PURGE")
+        if dry_run:
+            opts.append("/L")
+        if self.backup:
+            opts.append("/BACKUP:" + str(self.backup))
+
+        return (src_string, dst_string, opts)
 
     def sync(
         self,
