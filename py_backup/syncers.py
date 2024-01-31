@@ -9,12 +9,10 @@ class SyncBase:
         self,
         src: str | Path,
         dst: str | Path,
-        backup: str | Path = "",
         options: list | None = [],
     ) -> None:
         self.src = self.resolve_dir(src)
         self.dst = self.resolve_dir(dst)
-        self.backup = self.resolve_dir(backup, must_exist=False, empty_allowed=True)
         self.options = options if options else []
 
     @property
@@ -22,12 +20,8 @@ class SyncBase:
         return self._default_opts.copy()
 
     @staticmethod
-    def resolve_dir(
-        path: str | Path, must_exist: bool = True, empty_allowed: bool = False
-    ):
+    def resolve_dir(path: str | Path, must_exist: bool = True) -> Path | None:
         if not path:
-            if not empty_allowed:
-                raise ValueError("Empty path not allowed!")
             return None
 
         path = Path(path) if isinstance(path, str) else path
@@ -79,10 +73,9 @@ class Rsync(SyncBase):
         self,
         src: str | Path,
         dst: str | Path,
-        backup: str | Path = "",
         options: list | None = [],
     ) -> None:
-        super().__init__(src, dst, backup, options)
+        super().__init__(src, dst, options)
 
     def get_args(
         self, options: list, delete: bool, dry_run: bool
@@ -96,9 +89,6 @@ class Rsync(SyncBase):
             opts.append("--delete")
         if dry_run:
             opts.append("--dry-run")
-        if self.backup:
-            opts.append("--backup")
-            opts.append("--backup-dir=" + str(self.backup))
 
         return (src_string, dst_string, opts)
 
@@ -107,11 +97,18 @@ class Rsync(SyncBase):
         use_defaults: bool,
         delete: bool = False,
         dry_run: bool = False,
+        backup: str | Path = "",
         subprocess_kwargs: dict | None = {},
     ) -> subprocess.CompletedProcess:
-        # Create/filter args list to pass to subprocess.run
         opts = self.default_opts if use_defaults else self.options
         src_string, dst_string, opts = self.get_args(opts, delete, dry_run)
+
+        # rsync have built in backup functionality. Simply add flags!
+        if backup:
+            backup = self.resolve_dir(backup, must_exist=False)
+            opts.append("--backup")
+            opts.append("--backup-dir=" + str(self.backup))
+
         args = self.filter_args(opts, {"rsync", src_string, dst_string})
         args = ["rsync"] + args + [src_string, dst_string]
 
@@ -137,10 +134,9 @@ class Robocopy(SyncBase):
         self,
         src: str | Path,
         dst: str | Path,
-        backup: str | Path = "",
         options: list | None = [],
     ) -> None:
-        super().__init__(src, dst, backup, options)
+        super().__init__(src, dst, options)
 
     def get_args(
         self, options: list, delete: bool, dry_run: bool
@@ -153,8 +149,6 @@ class Robocopy(SyncBase):
             opts.append("/PURGE")
         if dry_run:
             opts.append("/L")
-        if self.backup:
-            opts.append("/BACKUP:" + str(self.backup))
 
         return (src_string, dst_string, opts)
 
@@ -163,17 +157,31 @@ class Robocopy(SyncBase):
         use_defaults: bool,
         delete: bool = False,
         dry_run: bool = False,
+        backup: str | Path = "",
         subprocess_kwargs: dict | None = {},
     ) -> subprocess.CompletedProcess:
-        args = options.copy() if options else []
+        opts = self.default_opts if use_defaults else self.options
+        src_string, dst_string, opts = self.get_args(opts, delete, dry_run)
+        
+        if backup:
+            # TODO implement backup functionality
+            raise NotImplementedError(
+                "The backup function in robocopy is not yet implemented!"
+            )
 
-    def extract_backup_dir(args: list[str]) -> str:
-        backup_dir = ""
+        args = self.filter_args(opts, {"robocopy", src_string, dst_string})
+        args = ["robocopy"] + [src_string, dst_string] + args
 
-        for i in range(len(args) - 1, -1, -1):
-            option = args[i]
-            if option.upper().startswith("/BACKUP:"):
-                backup_dir = args.pop(i)[8:]
-                break
+        # Ensure kwargs is dict if rsync is called directly
+        kwargs = subprocess_kwargs.copy() if subprocess_kwargs else {}
+        sanitized_subprocess_kwargs = self.sanitize_subprocess_kwargs(kwargs)
 
-        return backup_dir
+        try:
+            completed_process = subprocess.run(args, **sanitized_subprocess_kwargs)
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "robocopy does not seem to be installed on your system (or path is not set)!\n"
+                + "Install robocopy or fix path for program to work."
+            )
+
+        return completed_process
