@@ -2,7 +2,7 @@ import subprocess
 from pathlib import Path
 
 
-class SyncBase:
+class SyncABC:
     _default_opts = []
 
     def __init__(
@@ -65,7 +65,7 @@ class SyncBase:
         return kwargs
 
 
-class Rsync(SyncBase):
+class Rsync(SyncABC):
     # TODO maybe put this in a config file somewhere
     _default_opts = ["-a", "-i", "-v", "-h"]
 
@@ -130,7 +130,7 @@ class Rsync(SyncBase):
         return completed_process
 
 
-class Robocopy(SyncBase):
+class Robocopy(SyncABC):
     # TODO maybe put this in a config file somewhere
     _default_opts = ["/E", "/DCOPY:DAT", "/COPY:DAT", "/R:3", "/W:1"]
 
