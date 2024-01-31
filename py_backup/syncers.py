@@ -96,7 +96,7 @@ class Rsync(SyncBase):
         dry_run: bool = False,
         backup: str | Path = "",
         options: list | None = None,
-        subprocess_kwargs: dict | None = {},
+        subprocess_kwargs: dict | None = None,
     ) -> subprocess.CompletedProcess:
         opts = options.copy() if options is not None else self.default_opts
         src_string, dst_string, opts = self.get_args(opts, delete, dry_run)
@@ -160,7 +160,7 @@ class Robocopy(SyncBase):
         dry_run: bool = False,
         backup: str | Path = "",
         options: list | None = None,
-        subprocess_kwargs: dict | None = {},
+        subprocess_kwargs: dict | None = None,
     ) -> subprocess.CompletedProcess:
         opts = options.copy() if options is not None else self.default_opts
         src_string, dst_string, opts = self.get_args(opts, delete, dry_run)
