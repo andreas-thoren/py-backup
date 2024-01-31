@@ -119,7 +119,6 @@ def robocopy(
     options: list[str] | None = None,
     subprocess_kwargs: dict | None = None,
 ) -> subprocess.CompletedProcess:
-
     # Create/filter args list to pass to subprocess.run
     args = options.copy() if options else []
     backup_dir = ""

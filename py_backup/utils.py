@@ -10,7 +10,6 @@ def get_default_args(
     delete: bool = False,
     dry_run: bool = False,
 ) -> tuple[str, str, list[str] | None, dict | None]:
-
     function_map = {
         "rsync": get_rsync_defaults,
         "robocopy": get_robocopy_defaults,
@@ -28,7 +27,6 @@ def get_generic_func_defaults(
     delete: bool = False,
     dry_run: bool = False,
 ) -> tuple[str, str, list[str] | None, dict | None]:
-
     return (str(source), str(destination), [], {})
 
 
@@ -39,7 +37,6 @@ def get_rsync_defaults(
     delete: bool = False,
     dry_run: bool = False,
 ) -> tuple[str, str, list[str] | None, dict | None]:
-
     # Trailing slashes are importent in rsync call for consistent behaviour
     src_string = str(source) + "/"
     dst_string = str(destination) + "/"
@@ -63,7 +60,6 @@ def get_robocopy_defaults(
     delete: bool = False,
     dry_run: bool = False,
 ) -> tuple[str, str, list[str] | None, dict | None]:
-
     src_string = str(source)
     dst_string = str(destination)
     opts = default_options["robocopy"].copy()
