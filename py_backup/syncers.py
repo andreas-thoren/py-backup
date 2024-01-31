@@ -9,11 +9,9 @@ class SyncBase:
         self,
         src: str | Path,
         dst: str | Path,
-        options: list | None = [],
     ) -> None:
         self.src = self.resolve_dir(src)
         self.dst = self.resolve_dir(dst)
-        self.options = options if options else []
 
     @property
     def default_opts(self):
@@ -22,6 +20,7 @@ class SyncBase:
     @staticmethod
     def resolve_dir(path: str | Path, must_exist: bool = True) -> Path | None:
         if not path:
+            # Wont guess what empty value means. Cannot resolve. Return
             return None
 
         path = Path(path) if isinstance(path, str) else path
@@ -67,19 +66,18 @@ class SyncBase:
 
 
 class Rsync(SyncBase):
+    # TODO maybe put this in a config file somewhere
     _default_opts = ["-a", "-i", "-v", "-h"]
 
     def __init__(
         self,
         src: str | Path,
         dst: str | Path,
-        options: list | None = [],
     ) -> None:
-        super().__init__(src, dst, options)
+        super().__init__(src, dst)
 
     def get_args(
-        self, options: list, delete: bool, dry_run: bool
-    ) -> tuple[str, str, list[str]]:
+        self, options: list, delete: bool, dry_run: bool) -> tuple[str, str, list[str]]:
         # Trailing slashes are importent in rsync call for consistent behaviour
         src_string = str(self.src) + "/"
         dst_string = str(self.dst) + "/"
@@ -94,20 +92,25 @@ class Rsync(SyncBase):
 
     def sync(
         self,
-        use_defaults: bool,
         delete: bool = False,
         dry_run: bool = False,
         backup: str | Path = "",
+        options: list | None = None,
         subprocess_kwargs: dict | None = {},
     ) -> subprocess.CompletedProcess:
-        opts = self.default_opts if use_defaults else self.options
+        opts = options.copy() if options is not None else self.default_opts
         src_string, dst_string, opts = self.get_args(opts, delete, dry_run)
 
         # rsync have built in backup functionality. Simply add flags!
         if backup:
             backup = self.resolve_dir(backup, must_exist=False)
+            # If backup or backup-dir is specified through options remove dupl flags.
+            opts = [
+                opt for opt in opts
+                if not (opt == "--backup" or opt.startswith("--backup-dir="))
+            ]
             opts.append("--backup")
-            opts.append("--backup-dir=" + str(self.backup))
+            opts.append("--backup-dir=" + str(backup))
 
         args = self.filter_args(opts, {"rsync", src_string, dst_string})
         args = ["rsync"] + args + [src_string, dst_string]
@@ -128,19 +131,18 @@ class Rsync(SyncBase):
 
 
 class Robocopy(SyncBase):
+    # TODO maybe put this in a config file somewhere
     _default_opts = ["/E", "/DCOPY:DAT", "/COPY:DAT", "/R:3", "/W:1"]
 
     def __init__(
         self,
         src: str | Path,
         dst: str | Path,
-        options: list | None = [],
     ) -> None:
-        super().__init__(src, dst, options)
+        super().__init__(src, dst)
 
     def get_args(
-        self, options: list, delete: bool, dry_run: bool
-    ) -> tuple[str, str, list[str]]:
+        self, options: list, delete: bool, dry_run: bool) -> tuple[str, str, list[str]]:
         src_string = str(self.src)
         dst_string = str(self.dst)
         opts = options.copy()
@@ -154,16 +156,17 @@ class Robocopy(SyncBase):
 
     def sync(
         self,
-        use_defaults: bool,
         delete: bool = False,
         dry_run: bool = False,
         backup: str | Path = "",
+        options: list | None = None,
         subprocess_kwargs: dict | None = {},
     ) -> subprocess.CompletedProcess:
-        opts = self.default_opts if use_defaults else self.options
+        opts = options.copy() if options is not None else self.default_opts
         src_string, dst_string, opts = self.get_args(opts, delete, dry_run)
         
         if backup:
+            backup = self.resolve_dir(backup, must_exist=False)
             # TODO implement backup functionality
             raise NotImplementedError(
                 "The backup function in robocopy is not yet implemented!"
