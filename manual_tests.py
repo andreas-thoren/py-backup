@@ -1,5 +1,5 @@
 from py_backup import rsync, robocopy, folder_backup
-from py_backup.syncers import SyncBase
+from py_backup.syncers import SyncBase, Robocopy, Rsync
 
 
 # sync("entry.py", "tests/entry.py", ["-a", "--itemize-changes"], {"text": True, "capture_output": True})
@@ -25,6 +25,13 @@ def test_robocopy_folder_backup():
         delete=False,
         dry_run=True,
     )
+    
+def test_Rsync():
+    syncer = Rsync(
+        "tests/folder1/",
+        "tests/folder2/",
+    )
+    syncer.sync(True, delete=False, dry_run=True)
 
 def test_filter_args():
     args3 = ["rsync", "--option1", "rsync", "--option2", "dest", "--option1"]
@@ -33,4 +40,5 @@ def test_filter_args():
 
 
 if __name__ == "__main__":
-    test_filter_args()
+    #test_filter_args()
+    test_Rsync()

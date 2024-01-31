@@ -35,6 +35,8 @@ class SyncBase:
 
         if must_exist and (not path.is_dir()):
             raise ValueError(f"{path} does not point to an existing dir!")
+        
+        return path
 
     @staticmethod
     def filter_args(args: list, unwanted_args: set | None = None, duplicates_allowed: bool = True) -> list:
@@ -110,8 +112,8 @@ class Rsync(SyncBase):
         # Create/filter args list to pass to subprocess.run
         opts = self.default_opts if use_defaults else self.options
         src_string, dst_string, opts = self.get_args(opts, delete, dry_run)
-        args = self.filter_args(args, {"rsync", src_string, dst_string})
-        args = ["rsync"] + args + [self.src, self.dst]
+        args = self.filter_args(opts, {"rsync", src_string, dst_string})
+        args = ["rsync"] + args + [src_string, dst_string]
 
         # Ensure kwargs is dict if rsync is called directly
         kwargs = subprocess_kwargs.copy() if subprocess_kwargs else {}
@@ -163,4 +165,15 @@ class Robocopy(SyncBase):
         dry_run: bool = False,
         subprocess_kwargs: dict | None = {},
     ) -> subprocess.CompletedProcess:
-        pass
+        args = options.copy() if options else []
+
+    def extract_backup_dir(args: list[str]) -> str:
+        backup_dir = ""
+
+        for i in range(len(args) - 1, -1, -1):
+            option = args[i]
+            if option.upper().startswith("/BACKUP:"):
+                backup_dir = args.pop(i)[8:]
+                break
+
+        return backup_dir
