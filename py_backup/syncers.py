@@ -37,20 +37,39 @@ class SyncBase:
             raise ValueError(f"{path} does not point to an existing dir!")
 
     @staticmethod
-    def get_filtered_args(args: list, unwanted_args: set | None = None) -> list:
-        """Short function to remove duplicate args and remove unwanted_args while
+    def filter_args(args: list, unwanted_args: set | None = None, duplicates_allowed: bool = True) -> list:
+        """
+        Function to remove duplicate args and remove unwanted_args while
         maintaining args list order (if duplicate first position is kept).
 
         Args:
             args (list): Unfiltered args list
-            unwanted_args (set): Set of unwanted args to remove. Defaults to None if not provided.
+            duplicates_allowed (bool): Flag to allow or disallow duplicates
+            unwanted_args (set, optional): Set of unwanted args to remove. Defaults to None.
 
         Returns:
-            list: deduplicated list without unwanted args with initial order intact
+            list: Deduplicated list without unwanted args with initial order intact
         """
-        excl = unwanted_args if unwanted_args else set()
-        filtered_args_dict = {key: None for key in args if key not in excl}
-        return list(filtered_args_dict)
+        excl = unwanted_args or set()
+        args_dict = {}
+        i = 0
+
+        for option in args:
+            if option not in excl:
+                args_dict.setdefault(option, []).append(i)
+                i += 1
+        
+        if not duplicates_allowed:
+            return [ key for key in args_dict ]
+
+        ordered_args = []
+        for key, indices in args_dict.items():
+            for index in indices:
+                if len(ordered_args) <= index:
+                    ordered_args.extend([None] * (index + 1 - len(ordered_args)))
+                ordered_args[index] = key
+
+        return ordered_args
 
     @staticmethod
     def sanitize_subprocess_kwargs(kwargs: dict | None) -> dict:
@@ -99,7 +118,7 @@ class Rsync(SyncBase):
         # Create/filter args list to pass to subprocess.run
         opts = self.default_opts if use_defaults else self.options
         src_string, dst_string, opts = self.get_args(opts, delete, dry_run)
-        args = self.get_filtered_args(args, {"rsync", src_string, dst_string})
+        args = self.filter_args(args, {"rsync", src_string, dst_string})
         args = ["rsync"] + args + [self.src, self.dst]
 
         # Ensure kwargs is dict if rsync is called directly
