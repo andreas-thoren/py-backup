@@ -16,7 +16,7 @@ class SyncABC(ABC):
         self.dst = self.resolve_dir(dst)
 
     @property
-    def default_sync_options(self):
+    def default_sync_options(self) -> list:
         return self._default_sync_options.copy()
 
     @staticmethod
@@ -92,7 +92,7 @@ class SyncABC(ABC):
         return kwargs
     
     @staticmethod
-    def subprocess_run(args_list: list, subprocess_kwargs: dict | None):
+    def subprocess_run(args_list: list, subprocess_kwargs: dict | None) -> subprocess.CompletedProcess:
         try:
             completed_process = subprocess.run(args_list, **subprocess_kwargs)
         except FileNotFoundError:
@@ -107,7 +107,7 @@ class SyncABC(ABC):
         return completed_process
 
     @abstractmethod
-    def backup(self, backup: Path, backup_missing: bool, args: list):
+    def backup(self, backup: Path, backup_missing: bool, args: list) -> None:
         """Abstract method. The implementation of this in each subclass should back
         up files about to be overwritten. If backup_missing is True then
         files missing from the destination directory should also be backed up.
@@ -160,7 +160,7 @@ class Rsync(SyncABC):
         args = self.filter_args(options, {"rsync", src, dst})
         return ["rsync"] + args + [src, dst]
     
-    def backup(self, backup: Path, _, args: list):
+    def backup(self, backup: Path, _, args: list) -> None:
         """Rsyncs backup work by just modifying the args list in place since
         rsync have innate backup functionality"""
         for i in range(len(args)-1, -1, -1):
@@ -199,7 +199,7 @@ class Robocopy(SyncABC):
         args = self.filter_args(options, {"robocopy", src, dst})
         return ["robocopy"] + [src, dst] + args
 
-    def backup(self, backup: Path, backup_missing: bool, args: list):
+    def backup(self, backup: Path, backup_missing: bool, args: list) -> None:
         # TODO implement backup functionality
         raise NotImplementedError(
             "The backup function in robocopy is not yet implemented!"
