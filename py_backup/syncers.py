@@ -79,7 +79,7 @@ class SyncABC(ABC):
         # If delete == True missting files in destination directory will also be backed up.
         if backup and not dry_run:
             backup = self.resolve_dir(backup, must_exist=False)
-            self.backup(backup=backup, backup_missing=delete, args=subprocess_args)
+            self.backup(backup, delete, subprocess_args)
         
         # 4. Call subprocess.run with error handling.
         return self.subprocess_run(subprocess_args, subprocess_kwargs)
@@ -135,7 +135,6 @@ class SyncABC(ABC):
 
 
 class Rsync(SyncABC):
-    # TODO maybe put this in a config file somewhere
     _default_sync_options = RSYNC_DEFAULTS
 
     def __init__(
@@ -175,7 +174,6 @@ class Rsync(SyncABC):
 
 
 class Robocopy(SyncABC):
-    # TODO maybe put this in a config file somewhere
     _default_sync_options = ROBOCOPY_DEFAULTS
 
     def __init__(

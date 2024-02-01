@@ -32,7 +32,8 @@ def test_Rsync():
         "tests/folder2/",
     )
     backup_dir = "tests/backup_dir"
-    opts = ["-ai","--backup", "--backup-dir=" + backup_dir]
+    #opts = ["-ai","--backup", "--backup-dir=" + backup_dir]
+    opts = None
     syncer.sync(delete=False, dry_run=False, backup=backup_dir, options=opts)
 
 def test_Robocopy():
