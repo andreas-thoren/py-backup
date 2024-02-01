@@ -1,6 +1,7 @@
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
+from .config import RSYNC_DEFAULTS, ROBOCOPY_DEFAULTS
 
 
 class SyncABC(ABC):
@@ -135,7 +136,7 @@ class SyncABC(ABC):
 
 class Rsync(SyncABC):
     # TODO maybe put this in a config file somewhere
-    _default_sync_options = ["-a", "-i", "-v", "-h"]
+    _default_sync_options = RSYNC_DEFAULTS
 
     def __init__(
         self,
@@ -175,7 +176,7 @@ class Rsync(SyncABC):
 
 class Robocopy(SyncABC):
     # TODO maybe put this in a config file somewhere
-    _default_sync_options = ["/E", "/DCOPY:DAT", "/COPY:DAT", "/R:3", "/W:1"]
+    _default_sync_options = ROBOCOPY_DEFAULTS
 
     def __init__(
         self,
