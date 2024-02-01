@@ -1,10 +1,10 @@
 import unittest
-from py_backup.syncers import SyncBase, Rsync, Robocopy
+from py_backup.syncers import SyncABC, Rsync, Robocopy
 
 
 class TestUtils(unittest.TestCase):
     def test_filter_args(self):
-        filter_args = SyncBase.filter_args
+        filter_args = SyncABC.filter_args
         args = ["--option1", "--option2", "--unwanted"]
         filtered = filter_args(args, {"--unwanted"})
         self.assertEqual(filtered, ["--option1", "--option2"])

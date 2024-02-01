@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 class SyncABC(ABC):
-    _default_opts = []
+    _default_sync_options = []
 
     def __init__(
         self,
@@ -15,8 +15,8 @@ class SyncABC(ABC):
         self.dst = self.resolve_dir(dst)
 
     @property
-    def default_opts(self):
-        return self._default_opts.copy()
+    def default_sync_options(self):
+        return self._default_sync_options.copy()
 
     @staticmethod
     def resolve_dir(path: str | Path, must_exist: bool = True) -> Path | None:
@@ -68,17 +68,23 @@ class SyncABC(ABC):
         subprocess_kwargs: dict | None = None,
     ) -> subprocess.CompletedProcess:
         
-        args = self.get_args(options, delete, dry_run)
-        subprocess_kwargs = self.get_sanitized_subprocess_kwargs(subprocess_kwargs)
+        # 1. Get args list to be passed to subprocess.run
+        subprocess_args = self.get_args(options, delete, dry_run)
+        
+        # 2. Get (and sanitize) kwargs to be passed to subprocess.run
+        subprocess_kwargs = self.get_kwargs(subprocess_kwargs)
 
+        # 3. Call backup function to backup changed files (source <--> destination).
+        # If delete == True missting files in destination directory will also be backed up.
         if backup and not dry_run:
             backup = self.resolve_dir(backup, must_exist=False)
-            self.backup(backup, delete, args)
+            self.backup(backup=backup, backup_missing=delete, args=subprocess_args)
         
-        return self.subprocess_run(args, subprocess_kwargs)
+        # 4. Call subprocess.run with error handling.
+        return self.subprocess_run(subprocess_args, subprocess_kwargs)
 
     @staticmethod
-    def get_sanitized_subprocess_kwargs(kwargs: dict | None) -> dict:
+    def get_kwargs(kwargs: dict | None) -> dict:
         """Sanitize the subprocess keyword arguments."""
         kwargs = kwargs.copy() if kwargs else {}
         kwargs.pop("shell", None)
@@ -89,15 +95,32 @@ class SyncABC(ABC):
         try:
             completed_process = subprocess.run(args_list, **subprocess_kwargs)
         except FileNotFoundError:
+            cli_program = args_list[0]
+
             raise FileNotFoundError(
-                "rsync does not seem to be installed on your system (or path is not set)!\n"
-                + "Install rsync or fix path for program to work."
+                f"{cli_program} does not seem to be installed on your system, "
+                + "or path is not set.\n"
+                + f"Install {cli_program} or fix path for program to work."
             )
 
         return completed_process
 
     @abstractmethod
     def backup(self, backup: Path, backup_missing: bool, args: list):
+        """Abstract method. The implementation of this in each subclass should back
+        up files about to be overwritten. If backup_missing is True then
+        files missing from the destination directory should also be backed up.
+        Backed up files should be put in the the directory specified by the backup
+        Path with the directory structur in the destination folder intact.
+
+        Args:
+            backup (Path): Directory where backed up files should be put.
+                Can be an existing or nonexisting dir. If nonexisting the dir 
+                should be created.
+            backup_missing (bool): True if files existing in destination but not
+                in source should be backed up. 
+            args (list): args that should be supplied to subprocess.run.
+        """
         pass
 
     @abstractmethod
@@ -112,7 +135,7 @@ class SyncABC(ABC):
 
 class Rsync(SyncABC):
     # TODO maybe put this in a config file somewhere
-    _default_opts = ["-a", "-i", "-v", "-h"]
+    _default_sync_options = ["-a", "-i", "-v", "-h"]
 
     def __init__(
         self,
@@ -125,37 +148,34 @@ class Rsync(SyncABC):
         self, options: list, delete: bool, dry_run: bool
     ) -> tuple[str, str, list[str]]:
         # Trailing slashes are importent in rsync call for consistent behaviour
-        options = options.copy() if options is not None else self.default_opts
-        src_string = str(self.src) + "/"
-        dst_string = str(self.dst) + "/"
+        options = options.copy() if options is not None else self.default_sync_options
+        src = str(self.src) + "/"
+        dst = str(self.dst) + "/"
 
         if delete:
             options.append("--delete")
         if dry_run:
             options.append("--dry-run")
         
-        args = self.filter_args(options, {"rsync", src_string, dst_string})
-        return ["rsync"] + args + [src_string, dst_string]
+        args = self.filter_args(options, {"rsync", src, dst})
+        return ["rsync"] + args + [src, dst]
     
     def backup(self, backup: Path, _, args: list):
         """Rsyncs backup work by just modifying the args list in place since
         rsync have innate backup functionality"""
-        
-        backup = self.resolve_dir(backup, must_exist=False)
-
         for i in range(len(args)-1, -1, -1):
             arg = args[i]
 
             if arg == "--backup" or arg.startswith("--backup-dir="):
                 del args[i]
             
-        args.insert(-3, "--backup")
-        args.insert(-3, "--backup-dir=" + str(backup))
+        args.insert(-2, "--backup")
+        args.insert(-2, "--backup-dir=" + str(backup))
 
 
 class Robocopy(SyncABC):
     # TODO maybe put this in a config file somewhere
-    _default_opts = ["/E", "/DCOPY:DAT", "/COPY:DAT", "/R:3", "/W:1"]
+    _default_sync_options = ["/E", "/DCOPY:DAT", "/COPY:DAT", "/R:3", "/W:1"]
 
     def __init__(
         self,
@@ -168,21 +188,19 @@ class Robocopy(SyncABC):
         self, options: list, delete: bool, dry_run: bool
     ) -> tuple[str, str, list[str]]:
 
-        options = options.copy() if options is not None else self.default_opts
-        src_string = str(self.src)
-        dst_string = str(self.dst)
+        options = options.copy() if options is not None else self.default_sync_options
+        src = str(self.src)
+        dst = str(self.dst)
 
         if delete:
             options.append("/PURGE")
         if dry_run:
             options.append("/L")
 
-        args = self.filter_args(options, {"robocopy", src_string, dst_string})
-        args = ["robocopy"] + [src_string, dst_string] + args
+        args = self.filter_args(options, {"robocopy", src, dst})
+        return ["robocopy"] + [src, dst] + args
 
     def backup(self, backup: Path, backup_missing: bool, args: list):
-
-        backup = self.resolve_dir(backup, must_exist=False)
         # TODO implement backup functionality
         raise NotImplementedError(
             "The backup function in robocopy is not yet implemented!"

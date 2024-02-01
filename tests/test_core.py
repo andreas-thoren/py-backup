@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock
-from py_backup.core import folder_backup
+from py_backup.utils import folder_backup
 
 
 def get_mock_func() -> callable:

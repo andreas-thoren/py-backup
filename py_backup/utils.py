@@ -1,96 +1,74 @@
+"""The core functions exposed directly in py_backup"""
+import subprocess
 from pathlib import Path
-from .global_vars import default_options
+from typing import Callable
 
 
-def get_default_args(
-    func_name: str,
-    source: Path,
-    destination: Path,
-    backup_dir: Path | None,
+def folder_backup(
+    backup_func: Callable[
+        [str, str, list[str] | None, dict | None], subprocess.CompletedProcess
+    ],
+    source: str | Path,
+    destination: str | Path,
+    backup_dir: str | Path = "",
     delete: bool = False,
     dry_run: bool = False,
-) -> tuple[str, str, list[str] | None, dict | None]:
-    function_map = {
-        "rsync": get_rsync_defaults,
-        "robocopy": get_robocopy_defaults,
-    }
-
-    # 1. Choose the appropriate default generating funtion.
-    default_func = function_map.get(func_name, get_generic_func_defaults)
-    return default_func(source, destination, backup_dir, delete, dry_run)
-
-
-def get_generic_func_defaults(
-    source: Path,
-    destination: Path,
-    backup_dir: Path | None,
-    delete: bool = False,
-    dry_run: bool = False,
-) -> tuple[str, str, list[str] | None, dict | None]:
-    return (str(source), str(destination), [], {})
-
-
-def get_rsync_defaults(
-    source: Path,
-    destination: Path,
-    backup_dir: Path | None,
-    delete: bool = False,
-    dry_run: bool = False,
-) -> tuple[str, str, list[str] | None, dict | None]:
-    # Trailing slashes are importent in rsync call for consistent behaviour
-    src_string = str(source) + "/"
-    dst_string = str(destination) + "/"
-    opts = default_options["rsync"].copy()
-
-    if delete:
-        opts.append("--delete")
-    if dry_run:
-        opts.append("--dry-run")
-    if backup_dir:
-        opts.append("--backup")
-        opts.append("--backup-dir=" + str(backup_dir))
-
-    return (src_string, dst_string, opts, {})
-
-
-def get_robocopy_defaults(
-    source: Path,
-    destination: Path,
-    backup_dir: Path | None,
-    delete: bool = False,
-    dry_run: bool = False,
-) -> tuple[str, str, list[str] | None, dict | None]:
-    src_string = str(source)
-    dst_string = str(destination)
-    opts = default_options["robocopy"].copy()
-
-    if delete:
-        opts.append("/PURGE")
-    if dry_run:
-        opts.append("/L")
-    if backup_dir:
-        opts.append("/BACKUP:" + str(backup_dir))
-
-    return (src_string, dst_string, opts, {})
-
-
-def get_filtered_args(args: list, unwanted_args: set | None = None) -> list:
-    """Short function to remove duplicate args and remove unwanted_args while
-    maintaining args list order (if duplicate first position is kept).
+) -> subprocess.CompletedProcess:
+    """
+    Purpose of this function is to provide a higer level interface to
+    rsync/robocopy functions where default options are provided. In the case of robocopy
+    it also extends its functionality so that you can backup files to be
+    deleted/overwritten to a specified dir. rsync provides this functionality natively
+    so if backup_dir is provided it just enables the necessary flags for this to work.
 
     Args:
-        args (list): Unfiltered args list
-        unwanted_args (set): Set of unwanted args to remove. Defaults to None if not provided.
+        backup_func (callable): The callable this function uses to perform the folder backup.
+            Currently only rsync is supported.
+        source (str | Path): Existing folder path
+        destination (str | Path): Existing folder path
+        backup_dir (str | Path, optional): Folder path where
+            overwritten/deleted files should be backed up
+        delete (bool, optional): Wether to delete files not existing in source
+            in destination. Defaults to False.
+        dry_run (bool, optional): Only test what would happen.
+            Does not perform any actual actions. Defaults to False.
+
+    Raises:
+        ValueError: If source or destination does not point to existing dirs.
+        NotImplementedError: If using backup_func not working with this function.
+    """
+    # TODO create function that creates appropriate syncer depending
+    # on user platform.
+    pass
+
+
+def rsync(
+    source: str,
+    destination: str,
+    options: list[str] | None = None,
+    subprocess_kwargs: dict | None = None,
+) -> subprocess.CompletedProcess:
+    """Calls rsync(options, source, destination) through subprocess run.
+
+    Args:
+        source (str): Source folder/file
+        destination (str): Destination folder/file
+        options (list): Args list to be passed on to rsync.
+        subprocess_kwargs (dict): kwargs passed on to subproccess.run call.
 
     Returns:
-        list: deduplicated list without unwanted args with initial order intact
+        subprocess.CompletedProcess: returns CompletedProcess instance
+        from subprocess.run.
     """
-    excl = unwanted_args if unwanted_args else set()
-    filtered_args_dict = {key: None for key in args if key not in excl}
-    return list(filtered_args_dict)
+    # TODO create functional interface.
+    pass
 
 
-def sanitize_subprocess_kwargs(kwargs: dict | None) -> dict:
-    """Sanitize the subprocess keyword arguments."""
-    kwargs.pop("shell", None)
-    return kwargs
+def robocopy(
+    source: str,
+    destination: str,
+    options: list[str] | None = None,
+    subprocess_kwargs: dict | None = None,
+) -> subprocess.CompletedProcess:
+    # TODO create functional interface
+    pass
