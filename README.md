@@ -38,9 +38,10 @@ from py_backup.syncers import Rsync
 syncer = Rsync("src_folder", "dst_folder")
 opts = ["-a", "-P"]
 kwargs = {"text": True, "capture_output": True}
-syncer.sync(
+completed_process = syncer.sync(
     delete=False, dry_run=False, backup=backup_dir, options=opts, subprocess_kwargs=kwargs
 )
+# Do something with completed_process (instance of subprocess.CompletedProcess)
 ```
 
 ## Extending the Program
