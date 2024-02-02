@@ -24,37 +24,31 @@ def folder_backup(
     except KeyError:
         raise NotImplementedError(f"Platform {os_type} not supported!")
     
-
-
-
+    sync_func(source, destination, delete, dry_run, backup)
 
 def rsync(
-    source: str,
-    destination: str,
+    source: str | Path,
+    destination: str | Path,
+    delete: bool = False,
+    dry_run: bool = False,
+    backup: str = "",
     options: list[str] | None = None,
     subprocess_kwargs: dict | None = None,
 ) -> subprocess.CompletedProcess:
-    """Calls rsync(options, source, destination) through subprocess run.
 
-    Args:
-        source (str): Source folder/file
-        destination (str): Destination folder/file
-        options (list): Args list to be passed on to rsync.
-        subprocess_kwargs (dict): kwargs passed on to subproccess.run call.
-
-    Returns:
-        subprocess.CompletedProcess: returns CompletedProcess instance
-        from subprocess.run.
-    """
-    # TODO create functional interface.
-    pass
+    syncer = Rsync(source, destination)
+    return syncer.sync(delete, dry_run, backup, options, subprocess_kwargs)
 
 
 def robocopy(
-    source: str,
-    destination: str,
+    source: str | Path,
+    destination: str | Path,
+    delete: bool = False,
+    dry_run: bool = False,
+    backup: str = "",
     options: list[str] | None = None,
     subprocess_kwargs: dict | None = None,
 ) -> subprocess.CompletedProcess:
-    # TODO create functional interface
-    pass
+
+    syncer = Robocopy(source, destination)
+    return syncer.sync(delete, dry_run, backup, options, subprocess_kwargs)
