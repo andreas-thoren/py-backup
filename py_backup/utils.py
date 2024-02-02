@@ -1,8 +1,13 @@
-"""The core functions exposed directly in py_backup"""
+"""
+Functional interface for py-backup. Works by using the appropriate class in
+syncers.py but abstracts this away from the user.
+"""
+
 import subprocess
 import platform
 from pathlib import Path
-from .syncers import Rsync, Robocopy
+from .syncers import Rsync, Robocopy, SyncABC
+from .config import CONFIG, CONFIG_PATH
 
 
 def folder_backup(
@@ -11,44 +16,26 @@ def folder_backup(
     delete: bool = False,
     dry_run: bool = False,
     backup: str | Path = "",
+    sync_type: str = "defaults",
+    sync_class: SyncABC | None = None,
 ) -> subprocess.CompletedProcess:
-
-    os_to_function_map = {
-        "Linux": rsync,
-        "Windows": robocopy
-    }
+    os_to_syncer_map = {"Linux": Rsync, "Windows": Robocopy}
     os_type = platform.system()
-    
+
+    if sync_class is None:
+        try:
+            syncer = os_to_syncer_map[os_type](source, destination)
+        except KeyError as exc:
+            raise NotImplementedError(f"Platform {os_type} not supported!") from exc
+    else:
+        syncer = sync_class(source, destination)
+
     try:
-        sync_func = os_to_function_map[os_type] 
-    except KeyError:
-        raise NotImplementedError(f"Platform {os_type} not supported!")
-    
-    sync_func(source, destination, delete, dry_run, backup)
+        options = CONFIG[sync_type][syncer.__class__.__name__.lower()]
+    except KeyError as exc:
+        raise ValueError(
+            f"There is no sync type {sync_type} in {CONFIG_PATH}\n"
+            + f"for {syncer.__name__}!"
+        ) from exc
 
-def rsync(
-    source: str | Path,
-    destination: str | Path,
-    delete: bool = False,
-    dry_run: bool = False,
-    backup: str = "",
-    options: list[str] | None = None,
-    subprocess_kwargs: dict | None = None,
-) -> subprocess.CompletedProcess:
-
-    syncer = Rsync(source, destination)
-    return syncer.sync(delete, dry_run, backup, options, subprocess_kwargs)
-
-
-def robocopy(
-    source: str | Path,
-    destination: str | Path,
-    delete: bool = False,
-    dry_run: bool = False,
-    backup: str = "",
-    options: list[str] | None = None,
-    subprocess_kwargs: dict | None = None,
-) -> subprocess.CompletedProcess:
-
-    syncer = Robocopy(source, destination)
-    return syncer.sync(delete, dry_run, backup, options, subprocess_kwargs)
+    return syncer.sync(delete, dry_run, backup, options)

@@ -7,5 +7,5 @@ CONFIG_PATH = PROJECT_PATH / "config.json"
 with CONFIG_PATH.open("r") as f:
     CONFIG = json.load(f)
 
-RSYNC_DEFAULTS = CONFIG["rsync"]["defaults"]
-ROBOCOPY_DEFAULTS = CONFIG["robocopy"]["defaults"]
+RSYNC_DEFAULTS = CONFIG["defaults"]["rsync"]
+ROBOCOPY_DEFAULTS = CONFIG["defaults"]["robocopy"]

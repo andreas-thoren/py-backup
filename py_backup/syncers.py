@@ -30,11 +30,13 @@ class SyncABC(ABC):
 
         if must_exist and (not path.is_dir()):
             raise ValueError(f"{path} does not point to an existing dir!")
-        
+
         return path
 
     @staticmethod
-    def filter_args(args: list, unwanted_args: set | None = None, duplicates_allowed: bool = True) -> list:
+    def filter_args(
+        args: list, unwanted_args: set | None = None, duplicates_allowed: bool = True
+    ) -> list:
         """
         Function to remove duplicate args and remove unwanted_args while
         maintaining args list order (if duplicate first position is kept).
@@ -49,7 +51,7 @@ class SyncABC(ABC):
         """
         excl = unwanted_args.copy() if unwanted_args else set()
         filtered_args = []
-        
+
         for arg in args:
             if arg in excl:
                 continue
@@ -68,10 +70,9 @@ class SyncABC(ABC):
         options: list | None = None,
         subprocess_kwargs: dict | None = None,
     ) -> subprocess.CompletedProcess:
-        
         # 1. Get args list to be passed to subprocess.run
         subprocess_args = self.get_args(options, delete, dry_run)
-        
+
         # 2. Get (and sanitize) kwargs to be passed to subprocess.run
         subprocess_kwargs = self.get_kwargs(subprocess_kwargs)
 
@@ -80,7 +81,7 @@ class SyncABC(ABC):
         if backup and not dry_run:
             backup = self.resolve_dir(backup, must_exist=False)
             self.backup(backup, delete, subprocess_args)
-        
+
         # 4. Call subprocess.run with error handling.
         return self.subprocess_run(subprocess_args, subprocess_kwargs)
 
@@ -90,19 +91,23 @@ class SyncABC(ABC):
         kwargs = kwargs.copy() if kwargs else {}
         kwargs.pop("shell", None)
         return kwargs
-    
+
     @staticmethod
-    def subprocess_run(args_list: list, subprocess_kwargs: dict | None) -> subprocess.CompletedProcess:
+    def subprocess_run(
+        args_list: list, subprocess_kwargs: dict | None
+    ) -> subprocess.CompletedProcess:
         try:
-            completed_process = subprocess.run(args_list, **subprocess_kwargs)
-        except FileNotFoundError:
+            completed_process = subprocess.run(
+                args_list, **subprocess_kwargs, check=True
+            )
+        except FileNotFoundError as exc:
             cli_program = args_list[0]
 
             raise FileNotFoundError(
                 f"{cli_program} does not seem to be installed on your system, "
                 + "or path is not set.\n"
                 + f"Install {cli_program} or fix path for program to work."
-            )
+            ) from exc
 
         return completed_process
 
@@ -116,33 +121,22 @@ class SyncABC(ABC):
 
         Args:
             backup (Path): Directory where backed up files should be put.
-                Can be an existing or nonexisting dir. If nonexisting the dir 
+                Can be an existing or nonexisting dir. If nonexisting the dir
                 should be created.
             backup_missing (bool): True if files existing in destination but not
-                in source should be backed up. 
+                in source should be backed up.
             args (list): args that should be supplied to subprocess.run.
         """
-        pass
 
     @abstractmethod
     def get_args(
-        self,
-        options: list | None,
-        delete: bool,
-        dry_run: bool
+        self, options: list | None, delete: bool, dry_run: bool
     ) -> tuple[str, str, list[str]]:
         """Used by sync method to get args list for subsequent subproccess call"""
 
 
 class Rsync(SyncABC):
     _default_sync_options = RSYNC_DEFAULTS
-
-    def __init__(
-        self,
-        src: str | Path,
-        dst: str | Path,
-    ) -> None:
-        super().__init__(src, dst)
 
     def get_args(
         self, options: list, delete: bool, dry_run: bool
@@ -156,19 +150,19 @@ class Rsync(SyncABC):
             options.append("--delete")
         if dry_run:
             options.append("--dry-run")
-        
+
         args = self.filter_args(options, {"rsync", src, dst})
         return ["rsync"] + args + [src, dst]
-    
+
     def backup(self, backup: Path, _, args: list) -> None:
         """Rsyncs backup work by just modifying the args list in place since
         rsync have innate backup functionality"""
-        for i in range(len(args)-1, -1, -1):
+        for i in range(len(args) - 1, -1, -1):
             arg = args[i]
 
             if arg == "--backup" or arg.startswith("--backup-dir="):
                 del args[i]
-            
+
         args.insert(-2, "--backup")
         args.insert(-2, "--backup-dir=" + str(backup))
 
@@ -176,17 +170,9 @@ class Rsync(SyncABC):
 class Robocopy(SyncABC):
     _default_sync_options = ROBOCOPY_DEFAULTS
 
-    def __init__(
-        self,
-        src: str | Path,
-        dst: str | Path,
-    ) -> None:
-        super().__init__(src, dst)
-
     def get_args(
         self, options: list, delete: bool, dry_run: bool
     ) -> tuple[str, str, list[str]]:
-
         options = options.copy() if options is not None else self.default_sync_options
         src = str(self.src)
         dst = str(self.dst)
