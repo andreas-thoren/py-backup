@@ -6,14 +6,13 @@ from py_backup.syncers import SyncABC, Robocopy, Rsync
 # rsync("entry.py", "tests/entry.py", ["rsync", "-a", "--itemize-changes", "entry.py"])
 
 
-def test_rsync_folder_backup():
+def test_folder_backup():
     folder_backup(
-        rsync,
         "tests/folder1/",
         "tests/folder2/",
-        backup_dir="tests/backup_dir",
         delete=False,
         dry_run=True,
+        backup="tests/backup_folder/"
     )
 
 
@@ -55,6 +54,7 @@ def test_config():
 
 if __name__ == "__main__":
     #test_filter_args()
-    test_Rsync()
+    #test_Rsync()
     #test_Robocopy()
     #test_config()
+    test_folder_backup()
