@@ -21,6 +21,45 @@ class SyncABC(ABC):
 
     @staticmethod
     def resolve_dir(path: str | Path, must_exist: bool = True) -> Path:
+        """
+        Resolves the given path to an absolute path and checks if it points to an existing directory,
+        if required. Raises a ValueError if the path is empty, or if the path does not point to an
+        existing directory when `must_exist` is True.
+
+        Args:
+            path (str | Path): The file system path to resolve. Can be a string or a Path object.
+            must_exist (bool, optional): If True, checks that the path points to an existing directory.
+                Defaults to True.
+
+        Returns:
+            Path: The resolved absolute path as a Path object.
+
+        Raises:
+            ValueError: If the path is empty or does not point to an existing directory when required.
+
+        Examples:
+        >>> from pathlib import Path
+
+        Resolving a relative directory path:
+        >>> SyncABC.resolve_dir('py_backup').name
+        'py_backup'
+
+        Attempting to resolve a non-existing directory with must_exist=False:
+        >>> SyncABC.resolve_dir('non_existing_dir', must_exist=False).name
+        'non_existing_dir'
+
+        Attempting to resolve a non-existing directory with must_exist=True:
+        >>> SyncABC.resolve_dir('non_existing_dir', must_exist=True) # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        ValueError: ... does not point to an existing dir!
+
+        Using an empty string as path:
+        >>> SyncABC.resolve_dir('') # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        ValueError: path argument cannot be empty!...
+        """
         if not path:
             raise ValueError(
                 'path argument cannot be empty!'
@@ -45,11 +84,16 @@ class SyncABC(ABC):
 
         Args:
             args (list): Unfiltered args list
-            duplicates_allowed (bool): Flag to allow or disallow duplicates
             unwanted_args (set, optional): Set of unwanted args to remove. Defaults to None.
+            duplicates_allowed (bool, optional): Flag to allow or disallow duplicates
 
         Returns:
             list: Deduplicated list without unwanted args and initial order intact
+        
+        Example:
+        >>> args = ["rsync", "--option1", "rsync", "--option2", "dest", "--option1"]
+        >>> SyncABC.filter_args(args, {"rsync", "dest"})
+        ['--option1', '--option2', '--option1']
         """
         excl = unwanted_args.copy() if unwanted_args else set()
         filtered_args = []
