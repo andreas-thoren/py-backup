@@ -20,10 +20,12 @@ class SyncABC(ABC):
         return self._default_sync_options.copy()
 
     @staticmethod
-    def resolve_dir(path: str | Path, must_exist: bool = True) -> Path | None:
+    def resolve_dir(path: str | Path, must_exist: bool = True) -> Path:
         if not path:
-            # Wont guess what empty value means. Cannot resolve. Return
-            return None
+            raise ValueError(
+                'path argument cannot be empty!'
+                + 'If you want to specify current working directory use path = "."'
+            )
 
         path = Path(path) if isinstance(path, str) else path
         path = path.resolve()

@@ -8,7 +8,7 @@ def test_folder_backup():
         "tests/folder1/",
         "tests/folder2/",
         delete=False,
-        dry_run=True,
+        dry_run=False,
         backup="tests/backup_folder/",
     )
 
@@ -36,6 +36,7 @@ def test_filter_args():
     args3 = ["rsync", "--option1", "rsync", "--option2", "dest", "--option1"]
     filtered3 = SyncABC.filter_args(args3, {"rsync", "dest"})
     assert filtered3 == ["--option1", "--option2", "--option1"]
+    print(filtered3)
 
 
 def test_config():
@@ -44,8 +45,8 @@ def test_config():
 
 
 if __name__ == "__main__":
-    # test_filter_args()
+    test_filter_args()
     # test_Rsync()
     # test_Robocopy()
     # test_config()
-    test_folder_backup()
+    # test_folder_backup()

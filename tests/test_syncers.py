@@ -1,5 +1,5 @@
 import unittest
-from py_backup.syncers import SyncABC, Rsync, Robocopy
+from py_backup.syncers import SyncABC
 
 
 class TestUtils(unittest.TestCase):
