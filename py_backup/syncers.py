@@ -62,7 +62,7 @@ class SyncABC(ABC):
         """
         if not path:
             raise ValueError(
-                'path argument cannot be empty!'
+                "path argument cannot be empty!"
                 + 'If you want to specify current working directory use path = "."'
             )
 
@@ -89,7 +89,7 @@ class SyncABC(ABC):
 
         Returns:
             list: Deduplicated list without unwanted args and initial order intact
-        
+
         Example:
         >>> args = ["rsync", "--option1", "rsync", "--option2", "dest", "--option1"]
         >>> SyncABC.filter_args(args, {"rsync", "dest"})
@@ -116,6 +116,22 @@ class SyncABC(ABC):
         options: list | None = None,
         subprocess_kwargs: dict | None = None,
     ) -> subprocess.CompletedProcess:
+        """
+        Synchronizes files from the source to the destination directory using the
+        defined synchronization tool (e.g., rsync, robocopy). Optionally it also
+        backs upp files about to be overwritten or deleted.
+
+        Args:
+            delete (bool, optional): If True, delete extraneous files from dest dirs. Defaults to False.
+            dry_run (bool, optional): If True, perform a trial run with no changes made. Defaults to False.
+            backup (str | Path, optional): Path to the backup directory. Defaults to an empty string.
+            options (list | None, optional): Additional options to pass to the synchronization tool.
+                If None default options will be used (see config.json).
+            subprocess_kwargs (dict | None, optional): Additional kwargs to pass to subprocess.run. Defaults to None.
+
+        Returns:
+            subprocess.CompletedProcess: The result from the subprocess.run call.
+        """
         # 1. Get args list to be passed to subprocess.run
         subprocess_args = self.get_args(options, delete, dry_run)
 
@@ -133,7 +149,22 @@ class SyncABC(ABC):
 
     @staticmethod
     def get_kwargs(kwargs: dict | None) -> dict:
-        """Sanitize the subprocess keyword arguments."""
+        """
+        Prepares keyword arguments for the subprocess.run function by making a copy of the input
+        kwargs dict, removing the 'shell' key if present, to avoid shell injection risks.
+
+        Args:
+            kwargs (dict | None): A dictionary of keyword arguments to be sanitized and passed to subprocess.run.
+
+        Returns:
+            dict: A sanitized dictionary of keyword arguments.
+
+        Examples:
+        >>> SyncABC.get_kwargs({'shell': True, 'stdout': subprocess.PIPE})
+        {'stdout': -1}
+        >>> SyncABC.get_kwargs(None)
+        {}
+        """
         kwargs = kwargs.copy() if kwargs else {}
         kwargs.pop("shell", None)
         return kwargs
@@ -142,6 +173,27 @@ class SyncABC(ABC):
     def subprocess_run(
         args_list: list, subprocess_kwargs: dict | None
     ) -> subprocess.CompletedProcess:
+        """
+        Executes a subprocess with the given arguments and keyword arguments.
+        This method is a wrapper around subprocess.run, adding error handling
+        for common issues like the executable not being found.
+
+        Args:
+            args_list (list): The list of arguments for subprocess.run. The first argument should be the executables name.
+            subprocess_kwargs (dict | None): Additional keyword arguments to pass to subprocess.run.
+
+        Returns:
+            subprocess.CompletedProcess: The result from the subprocess.run call, which includes attributes
+            like returncode, stdout, and stderr.
+
+        Raises:
+            FileNotFoundError: If the executable is not found or not executable.
+        
+        Example:
+        >>> args_list = ['rsync', '-a', '-v', '-h', 'src', 'dst'] # doctest: +SKIP
+        >>> kwargs = {'text': True, 'capture_output': True} # doctest: +SKIP
+        >>> SyncABC.subprocess_run(args_list=args_list, subprocess_kwargs=kwargs) # doctest: +SKIP
+        """
         try:
             completed_process = subprocess.run(
                 args_list, **subprocess_kwargs, check=True
@@ -185,8 +237,33 @@ class Rsync(SyncABC):
     _default_sync_options = RSYNC_DEFAULTS
 
     def get_args(
-        self, options: list, delete: bool, dry_run: bool
+        self, options: list | None, delete: bool, dry_run: bool
     ) -> tuple[str, str, list[str]]:
+        """
+        Constructs the argument list for an rsync command based on the specified options, 
+        whether to delete extraneous files from the destination, and whether to perform 
+        a dry run. 
+
+        Args:
+            options (list): Additional options to pass to the rsync command.
+            delete (bool): If True, include the --delete option to remove files from 
+                           the destination not present in the source.
+            dry_run (bool): If True, include the --dry-run option to simulate the command 
+                            without making any changes.
+
+        Returns:
+            tuple[str, str, list[str]]: A tuple where the first element is the rsync command, 
+                                        then follows a list of all other options.
+                                        The second to last element will be the src_dir
+                                        and the last element the dst_dir.
+
+        Examples:
+        >>> rsync = Rsync('tests/source', 'tests/destination')
+        >>> rsync.get_args(['--archive'], delete=False, dry_run=True)  # doctest: +ELLIPSIS
+        ['rsync', '--archive', '--dry-run', ..., ...]
+        >>> rsync.get_args(['-ai'], delete=True, dry_run=False)  # doctest: +ELLIPSIS
+        ['rsync', '-ai', '--delete', ..., ...]
+        """
         # Trailing slashes are importent in rsync call for consistent behaviour
         options = options.copy() if options is not None else self.default_sync_options
         src = str(self.src) + "/"
@@ -217,7 +294,7 @@ class Robocopy(SyncABC):
     _default_sync_options = ROBOCOPY_DEFAULTS
 
     def get_args(
-        self, options: list, delete: bool, dry_run: bool
+        self, options: list | None, delete: bool, dry_run: bool
     ) -> tuple[str, str, list[str]]:
         options = options.copy() if options is not None else self.default_sync_options
         src = str(self.src)

@@ -22,7 +22,11 @@ def test_Rsync():
     opts = ["-a", "-P"]
     kwargs = {"text": True, "capture_output": True}
     syncer.sync(
-        delete=False, dry_run=False, backup=backup_dir, options=opts, subprocess_kwargs=kwargs
+        delete=False,
+        dry_run=False,
+        backup=backup_dir,
+        options=opts,
+        subprocess_kwargs=kwargs,
     )
 
 
