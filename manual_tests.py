@@ -19,17 +19,16 @@ def test_Rsync():
         "tests/destination",
     )
     backup_dir = "tests/backup_dir"
-    opts = ["-a"]
+    opts = ["-aivh"]
     kwargs = {"text": True, "capture_output": True}
     output = syncer.sync(
         delete=True,
-        dry_run=True,
+        dry_run=False,
         backup=backup_dir,
         options=opts,
         subprocess_kwargs=kwargs,
     )
     print(output.stdout)
-    print(output.stderr)
 
 
 def test_Robocopy():
