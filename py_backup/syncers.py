@@ -183,8 +183,7 @@ class SyncABC(ABC):
         """
         kwargs = kwargs if kwargs else {}
         excl = {"shell", "check", "text", "stderr"}
-        kwargs = { key: value for key, value in kwargs.items() if not key in excl }
-        return kwargs
+        return { key: value for key, value in kwargs.items() if not key in excl }
 
     def subprocess_run(
         self, args_list: list, subprocess_kwargs: dict | None
@@ -385,7 +384,7 @@ class Robocopy(SyncABC):
 
     def handle_errors(self, result: subprocess.CompletedProcess):
         """Should be overwritten by concrete classes when needed!"""
-        if result.returncode > 3:
+        if result.returncode > 7:
             msg = (
                 "Robocopy copy operation encountered an issue!\n"
                 + f"Robocopy return code: {result.returncode}"
