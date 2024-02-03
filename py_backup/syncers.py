@@ -158,7 +158,7 @@ class SyncABC(ABC):
 
         # 4. Call subprocess.run with error handling.
         result = self.subprocess_run(subprocess_args, subprocess_kwargs)
-        self.handle_errors(result)
+        self.handle_returncode(result)
         return result
 
     @staticmethod
@@ -220,7 +220,7 @@ class SyncABC(ABC):
 
         return result
 
-    def handle_errors(self, result: subprocess.CompletedProcess):
+    def handle_returncode(self, result: subprocess.CompletedProcess):
         """Should be overwritten by concrete classes when needed!"""
         result.check_returncode()
 
@@ -377,8 +377,8 @@ class Robocopy(SyncABC):
             "The backup function in robocopy is not yet implemented!"
         )
 
-    def handle_errors(self, result: subprocess.CompletedProcess):
-        """Should be overwritten by concrete classes when needed!"""
+    def handle_returncode(self, result: subprocess.CompletedProcess):
+        # All robocopy returncode < 8 are normal.
         if result.returncode > 7:
             msg = (
                 "Robocopy copy operation encountered an issue!\n"
