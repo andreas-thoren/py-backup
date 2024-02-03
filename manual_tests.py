@@ -9,7 +9,6 @@ def test_folder_backup():
         "tests/destination",
         delete=True,
         dry_run=False,
-        backup = "tests/backup_dir"
     )
 
 def test_Rsync():

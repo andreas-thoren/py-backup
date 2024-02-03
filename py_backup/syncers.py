@@ -140,7 +140,7 @@ class SyncABC(ABC):
             >>> syncer.sync(dry_run=True, options=['-avz']) # doctest: +SKIP
 
             # Usage example with backup specified and kwargs to capture output in returned CompletedProcess
-            >>> completed_process = syncer.sync(backup='/path/to/backup', subprocess_kwargs={'test': True, 'capture_output': True})  # doctest: +SKIP
+            >>> result = syncer.sync(backup='/path/to/backup', subprocess_kwargs={'test': True, 'capture_output': True})  # doctest: +SKIP
 
             Note: These examples are for illustration purposes and will not be executed during doctest runs due to the use of the +SKIP directive.
         """
@@ -157,7 +157,9 @@ class SyncABC(ABC):
             self.backup(backup, delete, subprocess_args)
 
         # 4. Call subprocess.run with error handling.
-        return self.subprocess_run(subprocess_args, subprocess_kwargs)
+        result = self.subprocess_run(subprocess_args, subprocess_kwargs)
+        self.handle_errors(result)
+        return result
 
     @staticmethod
     def get_kwargs(kwargs: dict | None) -> dict:
@@ -172,13 +174,16 @@ class SyncABC(ABC):
             dict: A sanitized dictionary of keyword arguments.
 
         Examples:
-        >>> SyncABC.get_kwargs({'shell': True, 'stdout': subprocess.PIPE})
+        >>> SyncABC.get_kwargs({'shell': True, 'check': True, 'stdout': subprocess.PIPE})
         {'stdout': -1}
+        >>> SyncABC.get_kwargs({'stderr': subprocess.PIPE, 'text': True, 'capture_output': True})
+        {'capture_output': True}
         >>> SyncABC.get_kwargs(None)
         {}
         """
-        kwargs = kwargs.copy() if kwargs else {}
-        kwargs.pop("shell", None)
+        kwargs = kwargs if kwargs else {}
+        excl = {"shell", "check", "text", "stderr"}
+        kwargs = { key: value for key, value in kwargs.items() if not key in excl }
         return kwargs
 
     def subprocess_run(
@@ -206,8 +211,8 @@ class SyncABC(ABC):
         >>> SyncABC.subprocess_run(args_list=args_list, subprocess_kwargs=kwargs) # doctest: +SKIP
         """
         try:
-            completed_process = subprocess.run(
-                args_list, **subprocess_kwargs, check=True
+            result = subprocess.run(
+                args_list, **subprocess_kwargs, check=False, stderr=subprocess.PIPE, text=True
             )
         except FileNotFoundError as exc:
             cli_program = args_list[0]
@@ -217,14 +222,13 @@ class SyncABC(ABC):
                 + "or path is not set.\n"
                 + f"Install {cli_program} or fix path for program to work."
             ) from exc
-        except subprocess.CalledProcessError as exc:
-            self.handle_errors(exc)
 
-        return completed_process
+        return result
 
-    def handle_errors(self, _: subprocess.CalledProcessError):
+    def handle_errors(self, result: subprocess.CompletedProcess):
         """Should be overwritten by concrete classes when needed!"""
-        raise
+        if result.returncode != 0:
+            result.check_returncode()
 
     @abstractmethod
     def backup(self, backup: Path, backup_missing: bool, args: list) -> None:
@@ -319,7 +323,7 @@ class Rsync(SyncABC):
         >>> args = ['rsync', '-av', '--delete', '--backup', '--backup-dir=old/dir', 'tests/source/', 'tests/destination/']
         >>> rsync.backup(backup, None, args)
         >>> args  # doctest: +ELLIPSIS
-        ['rsync', '-av', '--delete', '--backup', '--backup-dir=...tests/backup_dir', '...tests/source/', '...tests/destination/']
+        ['rsync', '-av', '--delete', '--backup', '--backup-dir=...backup_dir...', '...source...', '...tests...']
         """
         for i in range(len(args) - 1, -1, -1):
             arg = args[i]
@@ -379,12 +383,12 @@ class Robocopy(SyncABC):
             "The backup function in robocopy is not yet implemented!"
         )
 
-    def handle_errors(self, exc: subprocess.CalledProcessError):
-        if exc.returncode > 3:
+    def handle_errors(self, result: subprocess.CompletedProcess):
+        """Should be overwritten by concrete classes when needed!"""
+        if result.returncode > 3:
             msg = (
                 "Robocopy copy operation encountered an issue!\n"
-                + f"Robocopy return code: {exc.returncode}"
+                + f"Robocopy return code: {result.returncode}"
             )
             print(msg)
-            raise 
-        # If returncode <= 3 -> Do nothing. Everything ok. Robocopy returncodes are non standard!
+            result.check_returncode()
