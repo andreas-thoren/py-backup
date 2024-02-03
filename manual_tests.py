@@ -7,11 +7,10 @@ def test_folder_backup():
     folder_backup(
         "tests/source",
         "tests/destination",
-        delete=False,
+        delete=True,
         dry_run=False,
-        backup="tests/backup_folder/",
+        backup = "tests/backup_dir"
     )
-
 
 def test_Rsync():
     syncer = Rsync(
@@ -36,14 +35,17 @@ def test_Robocopy():
         "tests/source",
         "tests/destination",
     )
-    syncer.sync(delete=True, dry_run=True)
-
-
-def test_filter_args():
-    args3 = ["rsync", "--option1", "rsync", "--option2", "dest", "--option1"]
-    filtered3 = SyncABC.filter_args(args3, {"rsync", "dest"})
-    assert filtered3 == ["--option1", "--option2", "--option1"]
-    print(filtered3)
+    backup_dir = "tests/backup_dir"
+    opts = ["-aivh"]
+    kwargs = {"text": True, "capture_output": True}
+    output = syncer.sync(
+        delete=True,
+        dry_run=False,
+        backup=backup_dir,
+        options=opts,
+        subprocess_kwargs=kwargs,
+    )
+    print(output.stdout)
 
 
 def test_config():
@@ -52,8 +54,7 @@ def test_config():
 
 
 if __name__ == "__main__":
-    # test_filter_args()
-    test_Rsync()
+    test_folder_backup()
     # test_Robocopy()
+    # test_Rsync()
     # test_config()
-    # test_folder_backup()
