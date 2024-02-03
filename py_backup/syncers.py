@@ -131,6 +131,18 @@ class SyncABC(ABC):
 
         Returns:
             subprocess.CompletedProcess: The result from the subprocess.run call.
+
+        Examples:
+            >>> from pathlib import Path
+            >>> syncer = Rsync('tests/source', 'tests/destination') # doctest: +SKIP
+
+            # Usage example with custom options
+            >>> syncer.sync(dry_run=True, options=['-avz']) # doctest: +SKIP
+
+            # Usage example with backup specified and kwargs to capture output in returned CompletedProcess
+            >>> completed_process = syncer.sync(backup='/path/to/backup', subprocess_kwargs={'test': True, 'capture_output': True})  # doctest: +SKIP
+
+            Note: These examples are for illustration purposes and will not be executed during doctest runs due to the use of the +SKIP directive.
         """
         # 1. Get args list to be passed to subprocess.run
         subprocess_args = self.get_args(options, delete, dry_run)
@@ -188,7 +200,7 @@ class SyncABC(ABC):
 
         Raises:
             FileNotFoundError: If the executable is not found or not executable.
-        
+
         Example:
         >>> args_list = ['rsync', '-a', '-v', '-h', 'src', 'dst'] # doctest: +SKIP
         >>> kwargs = {'text': True, 'capture_output': True} # doctest: +SKIP
@@ -240,28 +252,28 @@ class Rsync(SyncABC):
         self, options: list | None, delete: bool, dry_run: bool
     ) -> tuple[str, str, list[str]]:
         """
-        Constructs the argument list for an rsync command based on the specified options, 
-        whether to delete extraneous files from the destination, and whether to perform 
-        a dry run. 
+        Constructs the argument list for an rsync command based on the specified options,
+        whether to delete extraneous files from the destination, and whether to perform
+        a dry run.
 
         Args:
             options (list): Additional options to pass to the rsync command.
-            delete (bool): If True, include the --delete option to remove files from 
+            delete (bool): If True, include the --delete option to remove files from
                            the destination not present in the source.
-            dry_run (bool): If True, include the --dry-run option to simulate the command 
+            dry_run (bool): If True, include the --dry-run option to simulate the command
                             without making any changes.
 
         Returns:
-            tuple[str, str, list[str]]: A tuple where the first element is the rsync command, 
+            tuple[str, str, list[str]]: A tuple where the first element is the rsync command,
                                         then follows a list of all other options.
                                         The second to last element will be the src_dir
                                         and the last element the dst_dir.
 
         Examples:
         >>> rsync = Rsync('tests/source', 'tests/destination')
-        >>> rsync.get_args(['--archive'], delete=False, dry_run=True)  # doctest: +ELLIPSIS
+        >>> rsync.get_args(['--archive'], delete=False, dry_run=True) # doctest: +ELLIPSIS
         ['rsync', '--archive', '--dry-run', ..., ...]
-        >>> rsync.get_args(['-ai'], delete=True, dry_run=False)  # doctest: +ELLIPSIS
+        >>> rsync.get_args(['-ai'], delete=True, dry_run=False) # doctest: +ELLIPSIS
         ['rsync', '-ai', '--delete', ..., ...]
         """
         # Trailing slashes are importent in rsync call for consistent behaviour
@@ -278,8 +290,32 @@ class Rsync(SyncABC):
         return ["rsync"] + args + [src, dst]
 
     def backup(self, backup: Path, _, args: list) -> None:
-        """Rsyncs backup work by just modifying the args list in place since
-        rsync have innate backup functionality"""
+        """
+        Modifies the `args` list for an rsync command to include backup options.
+        Specifically, it removes any existing '--backup' or '--backup-dir=' options
+        and adds them back with the specified backup directory.
+        This ensures predictable backup options are provided for later subprocess.run calls.
+
+        Args:
+            backup (Path): The path to the directory where backups should be stored.
+            _ (ignore): Placeholder for compatibility with sync method in SyncABC.
+            args (list): The list of existing rsync command arguments to be modified.
+
+        Examples:
+        >>> from pathlib import Path
+        >>> args = ['rsync', '-av', '--delete', 'tests/source/', 'tests/destination/']
+        >>> backup = Path('tests/backup_dir')
+        >>> rsync = Rsync('tests/source', 'tests/destination')
+        >>> rsync.backup(backup, None, args)
+        >>> args  # doctest: +ELLIPSIS
+        ['rsync', '-av', '--delete', '--backup', '--backup-dir=...backup_dir', '...tests/source/', '...tests/destination/']
+
+        Demonstrates removal of existing backup options before adding new ones:
+        >>> args = ['rsync', '-av', '--delete', '--backup', '--backup-dir=old/dir', 'tests/source/', 'tests/destination/']
+        >>> rsync.backup(backup, None, args)
+        >>> args  # doctest: +ELLIPSIS
+        ['rsync', '-av', '--delete', '--backup', '--backup-dir=...tests/backup_dir', '...tests/source/', '...tests/destination/']
+        """
         for i in range(len(args) - 1, -1, -1):
             arg = args[i]
 
@@ -296,6 +332,30 @@ class Robocopy(SyncABC):
     def get_args(
         self, options: list | None, delete: bool, dry_run: bool
     ) -> tuple[str, str, list[str]]:
+        """
+        Constructs the argument list for a robocopy command based on the specified options,
+        whether to delete extraneous files from the destination, and whether to perform
+        a dry run.
+
+        Args:
+            options (list): Additional options to pass to the Robocopy command.
+            delete (bool): If True, include the /PURGE option to remove files from the
+                           destination not present in the source.
+            dry_run (bool): If True, include the /L option to list actions that would be
+                            taken without actually executing them.
+
+        Returns:
+            tuple[str, str, list[str]]: A tuple where the first element is the Robocopy command,
+                                         the second and third elements are the source and
+                                         destination paths, followed by a list of all other options.
+
+        Examples:
+        >>> robocopy = Robocopy('tests/source', 'tests/destination')
+        >>> robocopy.get_args(['/MIR'], delete=False, dry_run=True) # doctest: +ELLIPSIS
+        ['robocopy', ..., ..., '/MIR', '/L']
+        >>> robocopy.get_args(['/R:3'], True, False) # doctest: +ELLIPSIS
+        ['robocopy', ..., ..., '/R:3', '/PURGE']
+        """
         options = options.copy() if options is not None else self.default_sync_options
         src = str(self.src)
         dst = str(self.dst)

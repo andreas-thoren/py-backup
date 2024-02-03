@@ -5,8 +5,8 @@ from py_backup.syncers import SyncABC, Robocopy, Rsync
 
 def test_folder_backup():
     folder_backup(
-        "tests/folder1/",
-        "tests/folder2/",
+        "tests/source",
+        "tests/destination",
         delete=False,
         dry_run=False,
         backup="tests/backup_folder/",
@@ -15,25 +15,27 @@ def test_folder_backup():
 
 def test_Rsync():
     syncer = Rsync(
-        "tests/folder1/",
-        "tests/folder2/",
+        "tests/source",
+        "tests/destination",
     )
     backup_dir = "tests/backup_dir"
-    opts = ["-a", "-P"]
+    opts = ["-a"]
     kwargs = {"text": True, "capture_output": True}
-    syncer.sync(
-        delete=False,
-        dry_run=False,
+    output = syncer.sync(
+        delete=True,
+        dry_run=True,
         backup=backup_dir,
         options=opts,
         subprocess_kwargs=kwargs,
     )
+    print(output.stdout)
+    print(output.stderr)
 
 
 def test_Robocopy():
     syncer = Robocopy(
-        "tests/folder1/",
-        "tests/folder2/",
+        "tests/source",
+        "tests/destination",
     )
     syncer.sync(delete=True, dry_run=True)
 
@@ -51,8 +53,8 @@ def test_config():
 
 
 if __name__ == "__main__":
-    test_filter_args()
-    # test_Rsync()
+    # test_filter_args()
+    test_Rsync()
     # test_Robocopy()
     # test_config()
     # test_folder_backup()
