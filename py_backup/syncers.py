@@ -174,16 +174,14 @@ class SyncABC(ABC):
             dict: A sanitized dictionary of keyword arguments.
 
         Examples:
-        >>> SyncABC.get_kwargs({'shell': True, 'check': True, 'stdout': subprocess.PIPE})
-        {'stdout': -1}
-        >>> SyncABC.get_kwargs({'stderr': subprocess.PIPE, 'text': True, 'capture_output': True})
-        {'capture_output': True}
+        >>> SyncABC.get_kwargs({'shell': True, 'stdout': subprocess.PIPE, 'capture_output': True, 'check': True})
+        {'stdout': -1, 'capture_output': True}
         >>> SyncABC.get_kwargs(None)
         {}
         """
         kwargs = kwargs if kwargs else {}
-        excl = {"shell", "check", "text", "stderr"}
-        return { key: value for key, value in kwargs.items() if not key in excl }
+        excl = {"shell", "check"}
+        return {key: value for key, value in kwargs.items() if not key in excl}
 
     def subprocess_run(
         self, args_list: list, subprocess_kwargs: dict | None
@@ -210,9 +208,7 @@ class SyncABC(ABC):
         >>> SyncABC.subprocess_run(args_list=args_list, subprocess_kwargs=kwargs) # doctest: +SKIP
         """
         try:
-            result = subprocess.run(
-                args_list, **subprocess_kwargs, check=False, stderr=subprocess.PIPE, text=True
-            )
+            result = subprocess.run(args_list, **subprocess_kwargs, check=False)
         except FileNotFoundError as exc:
             cli_program = args_list[0]
 
@@ -226,8 +222,7 @@ class SyncABC(ABC):
 
     def handle_errors(self, result: subprocess.CompletedProcess):
         """Should be overwritten by concrete classes when needed!"""
-        if result.returncode != 0:
-            result.check_returncode()
+        result.check_returncode()
 
     @abstractmethod
     def backup(self, backup: Path, backup_missing: bool, args: list) -> None:

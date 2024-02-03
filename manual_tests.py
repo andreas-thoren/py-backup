@@ -11,6 +11,7 @@ def test_folder_backup():
         dry_run=False,
     )
 
+
 def test_Rsync():
     syncer = Rsync(
         "tests/source",
