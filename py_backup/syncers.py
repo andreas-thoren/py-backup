@@ -181,9 +181,8 @@ class SyncABC(ABC):
         kwargs.pop("shell", None)
         return kwargs
 
-    @staticmethod
     def subprocess_run(
-        args_list: list, subprocess_kwargs: dict | None
+        self, args_list: list, subprocess_kwargs: dict | None
     ) -> subprocess.CompletedProcess:
         """
         Executes a subprocess with the given arguments and keyword arguments.
@@ -218,8 +217,14 @@ class SyncABC(ABC):
                 + "or path is not set.\n"
                 + f"Install {cli_program} or fix path for program to work."
             ) from exc
+        except subprocess.CalledProcessError as exc:
+            self.handle_errors(exc)
 
         return completed_process
+
+    def handle_errors(self, _: subprocess.CalledProcessError):
+        """Should be overwritten by concrete classes when needed!"""
+        raise
 
     @abstractmethod
     def backup(self, backup: Path, backup_missing: bool, args: list) -> None:
@@ -373,3 +378,13 @@ class Robocopy(SyncABC):
         raise NotImplementedError(
             "The backup function in robocopy is not yet implemented!"
         )
+
+    def handle_errors(self, exc: subprocess.CalledProcessError):
+        if exc.returncode > 3:
+            msg = (
+                "Robocopy copy operation encountered an issue!\n"
+                + f"Robocopy return code: {exc.returncode}"
+            )
+            print(msg)
+            raise 
+        # If returncode <= 3 -> Do nothing. Everything ok. Robocopy returncodes are non standard!
