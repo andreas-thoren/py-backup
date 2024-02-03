@@ -378,7 +378,32 @@ class Robocopy(SyncABC):
         )
 
     def handle_returncode(self, result: subprocess.CompletedProcess):
-        # All robocopy returncode < 8 are normal.
+        """
+        Handles the return code from a subprocess.CompletedProcess object 
+        for Robocopy operations since robocopy return codes are non standard.
+
+        Args:
+            result (subprocess.CompletedProcess): The result object from a Robocopy subprocess call.
+
+        Raises:
+            subprocess.CalledProcessError: If Robocopy's return code is 8 or higher.
+
+        Examples:
+        >>> import subprocess
+        >>> syncer = Robocopy("tests/source", "tests/destination")
+        >>> args = ["rsync", "-a", "-i", "tests/source", "tests/destination"]
+        >>> result = subprocess.CompletedProcess(args, 8)
+        >>> syncer.handle_returncode(result) # doctest: +ELLIPSIS
+        Traceback (most recent call last):
+        ...
+        subprocess.CalledProcessError...
+        >>> result = subprocess.CompletedProcess(args, 3)
+        >>> syncer.handle_returncode(result)
+        
+        No error!
+        """
+
+        #subprocess.CalledProcessError: Command '['rsync', '-a', '-i', 'tests/source', 'tests/destination']' returned non-zero exit status 8.
         if result.returncode > 7:
             msg = (
                 "Robocopy copy operation encountered an issue!\n"
