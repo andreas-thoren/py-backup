@@ -15,7 +15,7 @@ def folder_backup(
     destination: str | Path,
     delete: bool = False,
     dry_run: bool = False,
-    backup: str | Path = "",
+    backup_dir: str | Path = "",
     sync_type: str = "defaults",
     sync_class: SyncABC | None = None,
 ) -> subprocess.CompletedProcess:
@@ -38,4 +38,12 @@ def folder_backup(
             + f"for {syncer.__name__}!"
         ) from exc
 
-    return syncer.sync(delete, dry_run, backup, options)
+    return syncer.sync(delete, dry_run, backup_dir, options)
+
+def sync(*args):
+    # TODO change this into an actual function
+    print(f"sync called with args {args}")
+
+def backup(*args):
+    # TODO change this into an actual function
+    print(f"backup called with args {args}")

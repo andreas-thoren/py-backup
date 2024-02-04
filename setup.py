@@ -13,6 +13,11 @@ setup(
     author_email="at.lakarkonsult@gmail.com",
     url="https://github.com/andreas-thoren/py-backup",
     packages=find_packages(),
+    entry_points={
+        'console_scripts': [
+            'py-backup=py_backup.cli:main',
+        ],
+    },
     install_requires=[],
     classifiers=[
         "Programming Language :: Python :: 3",
