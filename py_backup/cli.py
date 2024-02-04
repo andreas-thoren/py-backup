@@ -42,7 +42,11 @@ def main():
         + "\n- Tries to preserve file/directory time stamps and attributes"
     )
 
-    mirror_parser = subparsers.add_parser("mirror", description=msg_mirror, formatter_class=argparse.RawDescriptionHelpFormatter)
+    mirror_parser = subparsers.add_parser(
+        "mirror",
+        description=msg_mirror,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     add_common_arguments(mirror_parser)
     mirror_parser.add_argument(
         "--backup-dir",
@@ -59,7 +63,11 @@ def main():
         + "\n- Tries to preserve file/directory time stamps and attributes"
     )
 
-    backup_parser = subparsers.add_parser("backup", description=msg_backup, formatter_class=argparse.RawDescriptionHelpFormatter)
+    backup_parser = subparsers.add_parser(
+        "backup",
+        description=msg_backup,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     add_common_arguments(backup_parser)
     backup_parser.add_argument(
         "--backup-dir",
@@ -79,7 +87,11 @@ def main():
         + "\n- Tries to preserve file/directory time stamps and attributes"
     )
 
-    incremental_parser = subparsers.add_parser("incremental", description=msg_incremental, formatter_class=argparse.RawDescriptionHelpFormatter)
+    incremental_parser = subparsers.add_parser(
+        "incremental",
+        description=msg_incremental,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     add_common_arguments(incremental_parser)
 
     incremental_parser.add_argument(
