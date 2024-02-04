@@ -36,14 +36,13 @@ def main():
 
     # mirror command
     msg_mirror = (
-        "Mirrors source directory to destination directory."
-        + "\nNOTE:"
+        "Mirrors source directory to destination directory:"
         + "\n- Deletes files in destination directory which doesn't exist in source!"
         + "\n- Overwrites files in destination with files from source if modification times differ!"
         + "\n- Tries to preserve file/directory time stamps and attributes"
     )
 
-    mirror_parser = subparsers.add_parser("mirror", description=msg_mirror)
+    mirror_parser = subparsers.add_parser("mirror", description=msg_mirror, formatter_class=argparse.RawDescriptionHelpFormatter)
     add_common_arguments(mirror_parser)
     mirror_parser.add_argument(
         "--backup-dir",
@@ -54,14 +53,13 @@ def main():
 
     # Backup command
     msg_backup = (
-        "Backups files and directories in source recursively into destination."
-        + "NOTE:"
+        "Backups files and directories in source recursively into destination:"
         + "\n- Does not delete files in destination which doesn't exist in source"
         + "\n- Overwrites files in destination with files from source if modification times differ!"
         + "\n- Tries to preserve file/directory time stamps and attributes"
     )
 
-    backup_parser = subparsers.add_parser("backup", description=msg_backup)
+    backup_parser = subparsers.add_parser("backup", description=msg_backup, formatter_class=argparse.RawDescriptionHelpFormatter)
     add_common_arguments(backup_parser)
     backup_parser.add_argument(
         "--backup-dir",
@@ -72,8 +70,7 @@ def main():
 
     # Incremental backup command
     msg_incremental = (
-        "Mirrors source directory to destination directory."
-        + "NOTE:"
+        "Mirrors source directory to destination directory:"
         + "\n- Backs up deleted and overwritten files to specified backup directory!"
         + "\n- Files/dirs backed up this way will be placed in nested subdirectories"
         + "\n- num_incremental specifies how many of these nested subdirectories will be kept before being deleted."
@@ -82,7 +79,7 @@ def main():
         + "\n- Tries to preserve file/directory time stamps and attributes"
     )
 
-    incremental_parser = subparsers.add_parser("incremental", description=msg_incremental)
+    incremental_parser = subparsers.add_parser("incremental", description=msg_incremental, formatter_class=argparse.RawDescriptionHelpFormatter)
     add_common_arguments(incremental_parser)
 
     incremental_parser.add_argument(
