@@ -37,13 +37,13 @@ def main():
     # mirror command
     msg_mirror = (
         "Mirrors source directory to destination directory."
-        + "NOTE:"
+        + "\nNOTE:"
         + "\n- Deletes files in destination directory which doesn't exist in source!"
         + "\n- Overwrites files in destination with files from source if modification times differ!"
         + "\n- Tries to preserve file/directory time stamps and attributes"
     )
 
-    mirror_parser = subparsers.add_parser("mirror", help=msg_mirror)
+    mirror_parser = subparsers.add_parser("mirror", description=msg_mirror)
     add_common_arguments(mirror_parser)
     mirror_parser.add_argument(
         "--backup-dir",
@@ -61,7 +61,7 @@ def main():
         + "\n- Tries to preserve file/directory time stamps and attributes"
     )
 
-    backup_parser = subparsers.add_parser("backup", help=msg_backup)
+    backup_parser = subparsers.add_parser("backup", description=msg_backup)
     add_common_arguments(backup_parser)
     backup_parser.add_argument(
         "--backup-dir",
@@ -82,7 +82,7 @@ def main():
         + "\n- Tries to preserve file/directory time stamps and attributes"
     )
 
-    incremental_parser = subparsers.add_parser("incremental", help=msg_incremental)
+    incremental_parser = subparsers.add_parser("incremental", description=msg_incremental)
     add_common_arguments(incremental_parser)
 
     incremental_parser.add_argument(
