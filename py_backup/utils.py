@@ -58,7 +58,7 @@ def mirror(source: str, destination: str, dry_run: bool, backup_dir: str = ""):
 
 
 def incremental(
-    source: str, destination: str, backup_dir: str, num_incremental: int, dry_run: bool
+    source: str, destination: str, dry_run: bool , backup_dir: str, num_incremental: int
 ):
     # TODO change this into an actual function
     print(
