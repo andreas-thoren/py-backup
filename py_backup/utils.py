@@ -42,19 +42,11 @@ def folder_backup(
 
 
 def backup(source: str, destination: str, dry_run: bool, backup_dir: str = ""):
-    # TODO change this into an actual function
-    print(
-        f"backup called with args source={source}, destination={destination}, "
-        + f"backup_dir={backup_dir}, dry_run={dry_run}"
-    )
+    folder_backup(source, destination, delete=False, dry_run=dry_run, backup_dir=backup_dir, sync_type="backup")
 
 
 def mirror(source: str, destination: str, dry_run: bool, backup_dir: str = ""):
-    # TODO change this into an actual function
-    print(
-        f"mirror called with args source={source}, destination={destination}, "
-        + f"backup_dir={backup_dir}, dry_run={dry_run}"
-    )
+    folder_backup(source, destination, delete=True, dry_run=dry_run, backup_dir=backup_dir, sync_type="mirror")
 
 
 def incremental(
@@ -63,5 +55,5 @@ def incremental(
     # TODO change this into an actual function
     print(
         f"incremental called with args source={source}, destination={destination}, "
-        + f"backup_dir={backup_dir}, num_incremental={num_incremental}, dry_run={dry_run}"
+        + f"dry_run={dry_run}, backup_dir={backup_dir}, num_incremental={num_incremental}"
     )
