@@ -14,8 +14,8 @@ setup(
     url="https://github.com/andreas-thoren/py-backup",
     packages=find_packages(),
     entry_points={
-        'console_scripts': [
-            'py-backup=py_backup.cli:main',
+        "console_scripts": [
+            "py-backup=py_backup.cli:main",
         ],
     },
     install_requires=[],

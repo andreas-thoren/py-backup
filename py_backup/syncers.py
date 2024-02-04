@@ -379,7 +379,7 @@ class Robocopy(SyncABC):
 
     def handle_returncode(self, result: subprocess.CompletedProcess):
         """
-        Handles the return code from a subprocess.CompletedProcess object 
+        Handles the return code from a subprocess.CompletedProcess object
         for Robocopy operations since robocopy return codes are non standard.
 
         Args:
@@ -399,11 +399,11 @@ class Robocopy(SyncABC):
         subprocess.CalledProcessError...
         >>> result = subprocess.CompletedProcess(args, 3)
         >>> syncer.handle_returncode(result)
-        
+
         No error!
         """
 
-        #subprocess.CalledProcessError: Command '['rsync', '-a', '-i', 'tests/source', 'tests/destination']' returned non-zero exit status 8.
+        # subprocess.CalledProcessError: Command '['rsync', '-a', '-i', 'tests/source', 'tests/destination']' returned non-zero exit status 8.
         if result.returncode > 7:
             msg = (
                 "Robocopy copy operation encountered an issue!\n"

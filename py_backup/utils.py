@@ -40,10 +40,28 @@ def folder_backup(
 
     return syncer.sync(delete, dry_run, backup_dir, options)
 
-def sync(*args):
-    # TODO change this into an actual function
-    print(f"sync called with args {args}")
 
-def backup(*args):
+def backup(source: str, destination: str, dry_run: bool, backup_dir: str = ""):
     # TODO change this into an actual function
-    print(f"backup called with args {args}")
+    print(
+        f"backup called with args source={source}, destination={destination}, "
+        + f"backup_dir={backup_dir}, dry_run={dry_run}"
+    )
+
+
+def mirror(source: str, destination: str, dry_run: bool, backup_dir: str = ""):
+    # TODO change this into an actual function
+    print(
+        f"mirror called with args source={source}, destination={destination}, "
+        + f"backup_dir={backup_dir}, dry_run={dry_run}"
+    )
+
+
+def incremental(
+    source: str, destination: str, backup_dir: str, num_incremental: int, dry_run: bool
+):
+    # TODO change this into an actual function
+    print(
+        f"incremental called with args source={source}, destination={destination}, "
+        + f"backup_dir={backup_dir}, num_incremental={num_incremental}, dry_run={dry_run}"
+    )

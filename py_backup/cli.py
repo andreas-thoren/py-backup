@@ -1,41 +1,110 @@
 import argparse
 from . import utils
 
-def add_common_arguments(subparser: argparse.ArgumentParser):
-    # Common arguments for both sync and backup
-    subparser.add_argument('source', help='Source directory')
-    subparser.add_argument('destination', help='Destination directory')
-    subparser.add_argument('--delete', action='store_true', help='Delete extra files from dest that are not present in source.')
-    subparser.add_argument('--dry-run', action='store_true', help='Test run without making any actual changes to see what would happen.')
 
-def sync(args: argparse.Namespace):
-    # Assuming utils.sync_function takes source, destination, delete, and dry_run as arguments
-    utils.sync(args.source, args.destination, args.delete, args.dry_run)
+def add_common_arguments(subparser: argparse.ArgumentParser):
+    subparser.add_argument("source", help="Source directory")
+    subparser.add_argument("destination", help="Destination directory")
+    subparser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Test run without making any actual changes to see what would happen.",
+    )
+
+
+def mirror(args: argparse.Namespace):
+    utils.mirror(args.source, args.destination, args.dry_run, args.backup_dir)
+
 
 def backup(args: argparse.Namespace):
-    # Assuming utils.backup_function takes source, destination, backup_dir, delete, and dry_run as arguments
-    utils.backup(args.source, args.destination, args.backup_dir, args.delete, args.dry_run)
+    utils.backup(args.source, args.destination, args.dry_run, args.backup_dir)
+
+
+def incremental(args: argparse.Namespace):
+    utils.incremental(
+        args.source,
+        args.destination,
+        args.dry_run,
+        args.backup_dir,
+        args.num_incremental,
+    )
+
 
 def main():
     parser = argparse.ArgumentParser(description="Sync/Backup CLI tool using argparse.")
-    subparsers = parser.add_subparsers(help='Commands')
+    subparsers = parser.add_subparsers(help="Commands", dest="cmd", required=True)
 
-    # Sync command
-    sync_parser = subparsers.add_parser('sync', help='Trigger sync tasks')
-    add_common_arguments(sync_parser)
-    sync_parser.set_defaults(func=sync)
+    # mirror command
+    msg_mirror = (
+        "Mirrors source directory to destination directory."
+        + "NOTE:"
+        + "\n- Deletes files in destination directory which doesn't exist in source!"
+        + "\n- Overwrites files in destination with files from source if modification times differ!"
+        + "\n- Tries to preserve file/directory time stamps and attributes"
+    )
+
+    mirror_parser = subparsers.add_parser("mirror", help=msg_mirror)
+    add_common_arguments(mirror_parser)
+    mirror_parser.add_argument(
+        "--backup-dir",
+        default="",
+        help="Backup directory for storing backups of files about to be overwritten/deleted.",
+    )
+    mirror_parser.set_defaults(func=mirror)
 
     # Backup command
-    backup_parser = subparsers.add_parser('backup', help='Trigger backup tasks')
+    msg_backup = (
+        "Backups files and directories in source recursively into destination."
+        + "NOTE:"
+        + "\n- Does not delete files in destination which doesn't exist in source"
+        + "\n- Overwrites files in destination with files from source if modification times differ!"
+        + "\n- Tries to preserve file/directory time stamps and attributes"
+    )
+
+    backup_parser = subparsers.add_parser("backup", help=msg_backup)
     add_common_arguments(backup_parser)
-    backup_parser.add_argument('backup_dir', help='Backup directory for storing backups of files about to be overwritten or deleted.')
+    backup_parser.add_argument(
+        "--backup-dir",
+        default="",
+        help="Backup directory for storing backups of files about to be overwritten/deleted.",
+    )
     backup_parser.set_defaults(func=backup)
 
+    # Incremental backup command
+    msg_incremental = (
+        "Mirrors source directory to destination directory."
+        + "NOTE:"
+        + "\n- Backs up deleted and overwritten files to specified backup directory!"
+        + "\n- Files/dirs backed up this way will be placed in nested subdirectories"
+        + "\n- num_incremental specifies how many of these nested subdirectories will be kept before being deleted."
+        + "\n- Deletes files in destination directory which doesn't exist in source!"
+        + "\n- Overwrites files in destination with files from source if modification times differ!"
+        + "\n- Tries to preserve file/directory time stamps and attributes"
+    )
+
+    incremental_parser = subparsers.add_parser("incremental", help=msg_incremental)
+    add_common_arguments(incremental_parser)
+
+    incremental_parser.add_argument(
+        "--backup-dir",
+        required=True,
+        help="Backup directory for storing backups of files about to be overwritten/deleted.",
+    )
+
+    incremental_parser.add_argument(
+        "--num-incremental",
+        required=True,
+        type=int,
+        help="Number of incremental backups to keep",
+    )
+    incremental_parser.set_defaults(func=incremental)
+
     args = parser.parse_args()
-    if hasattr(args, 'func'):
+    if hasattr(args, "func"):
         args.func(args)
     else:
         parser.print_help()
+
 
 if __name__ == "__main__":
     main()
