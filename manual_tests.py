@@ -54,10 +54,11 @@ def test_config():
 
 def test_dir_comparator():
     comparator = DirComparator(
-        "/home/ged/Programmering/Projects/handle_file_duplicates/test_data/test_dir",
-        "/home/ged/Programmering/Projects/handle_file_duplicates/test_data/near_copy_test_dir"
+        "tests/destination",
+        "tests/source"
     )
     result = comparator.dir_compare(True)
+    print(result)
 
 
 if __name__ == "__main__":

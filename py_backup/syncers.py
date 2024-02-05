@@ -449,7 +449,10 @@ class DirComparator:
                     nested_dir_path = os.path.join(rel_path, dir_entry.name)
                     helper(nested_dir_path)
                         
-        helper("")
+        if os.path.exists(self.dir):
+            helper("")
+
+        return self.comparison_dict
     
     @staticmethod
     def files_equal(dir_entry: os.DirEntry, compare_path: str) -> bool:
