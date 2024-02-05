@@ -443,7 +443,7 @@ class DirComparator:
 
                 if dir_entry.is_file():
                     if not self.files_equal(dir_entry, compare_path):
-                        self.comparison_dict["unique"].append(dir_entry.path)
+                        self.comparison_dict["changed"].append(dir_entry.path)
                     
                 elif dir_entry.is_dir():
                     nested_dir_path = os.path.join(rel_path, dir_entry.name)
