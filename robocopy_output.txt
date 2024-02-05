@@ -1,0 +1,37 @@
+Robocopy .\OneDrive\Apps\ .\OneDriveTest\Apps\ /L /MIR /NJH /NJS
+
+                           0    D:\athor\OneDrive\Apps\
+        *EXTRA Dir        -1    D:\athor\OneDriveTest\Apps\delete_dir\
+          *EXTRA File                  5        delete_file2.txt
+        *EXTRA Dir        -1    D:\athor\OneDriveTest\Apps\delete_dir\inner_delete_dir\
+          *EXTRA File                  0        deletefile.txt
+                           6    D:\athor\OneDrive\Apps\Rakuten Kobo\
+            Newer                     26        bilateral_testfile.txt
+            New File               1.7 m        Eloquent_JavaScript.epub
+            Older                 837236        Hur du lägger till böcker på din läsplatta med Dropbox.pdf
+          New Dir          0    D:\athor\OneDrive\Apps\Rakuten Kobo\source_test_dir\
+
+Robocopy .\OneDrive\Apps\ .\OneDriveTest\Apps\ /L /MIR /NJH /NJS /NDL
+
+        *EXTRA Dir        -1    D:\athor\OneDriveTest\Apps\delete_dir\
+          *EXTRA File                  5        D:\athor\OneDriveTest\Apps\delete_dir\delete_file2.txt
+        *EXTRA Dir        -1    D:\athor\OneDriveTest\Apps\delete_dir\inner_delete_dir\
+          *EXTRA File                  0        D:\athor\OneDriveTest\Apps\deletefile.txt
+            Newer                     26        D:\athor\OneDrive\Apps\Rakuten Kobo\bilateral_testfile.txt
+            New File               1.7 m        D:\athor\OneDrive\Apps\Rakuten Kobo\Eloquent_JavaScript.epub
+            Older                 837236        D:\athor\OneDrive\Apps\Rakuten Kobo\Hur du lägger till böcker på din läsplatta med Dropbox.pdf
+
+Robocopy .\OneDrive\Apps\ .\OneDriveTest\Apps\ /L /MIR /NJH /NJS /FP
+
+                           0    D:\athor\OneDrive\Apps\
+        *EXTRA Dir        -1    D:\athor\OneDriveTest\Apps\delete_dir\
+          *EXTRA File                  5        D:\athor\OneDriveTest\Apps\delete_dir\delete_file2.txt
+        *EXTRA Dir        -1    D:\athor\OneDriveTest\Apps\delete_dir\inner_delete_dir\
+          *EXTRA File                  0        D:\athor\OneDriveTest\Apps\deletefile.txt
+                           5    D:\athor\OneDrive\Apps\Rakuten Kobo\
+          *EXTRA File                 17        D:\athor\OneDriveTest\Apps\Rakuten Kobo\bilateral_testfile.txt
+            New File               1.7 m        D:\athor\OneDrive\Apps\Rakuten Kobo\Eloquent_JavaScript.epub
+            Older                 837236        D:\athor\OneDrive\Apps\Rakuten Kobo\Hur du lägger till böcker på din läsplatta med Dropbox.pdf
+          New Dir          2    D:\athor\OneDrive\Apps\Rakuten Kobo\source_test_dir\
+            New File                  12        D:\athor\OneDrive\Apps\Rakuten Kobo\source_test_dir\inner_source_file - kopia.txt
+            New File                  12        D:\athor\OneDrive\Apps\Rakuten Kobo\source_test_dir\inner_source_file.txt
