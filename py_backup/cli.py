@@ -6,7 +6,7 @@ def add_common_arguments(subparser: argparse.ArgumentParser):
     subparser.add_argument("source", help="Source directory")
     subparser.add_argument("destination", help="Destination directory")
     subparser.add_argument(
-        "--dry-run",
+        "-n", "--dry-run",
         action="store_true",
         help="Test run without making any actual changes to see what would happen.",
     )
@@ -49,7 +49,7 @@ def main():
     )
     add_common_arguments(mirror_parser)
     mirror_parser.add_argument(
-        "--backup-dir",
+        "-b", "--backup-dir",
         default="",
         help="Backup directory for storing backups of files about to be overwritten/deleted.",
     )
@@ -70,7 +70,7 @@ def main():
     )
     add_common_arguments(backup_parser)
     backup_parser.add_argument(
-        "--backup-dir",
+        "-b", "--backup-dir",
         default="",
         help="Backup directory for storing backups of files about to be overwritten/deleted.",
     )
@@ -95,13 +95,13 @@ def main():
     add_common_arguments(incremental_parser)
 
     incremental_parser.add_argument(
-        "--backup-dir",
+        "-b", "--backup-dir",
         required=True,
         help="Backup directory for storing backups of files about to be overwritten/deleted.",
     )
 
     incremental_parser.add_argument(
-        "--num-incremental",
+        "-num", "--num-incremental",
         required=True,
         type=int,
         help="Number of incremental backups to keep",
