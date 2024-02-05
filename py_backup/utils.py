@@ -6,10 +6,10 @@ syncers.py but abstracts this away from the user.
 import platform
 import shutil
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Iterator
-from .syncers import Rsync, Robocopy, SyncABC
+from .syncers import Rsync, Robocopy
 from .config import CONFIG, CONFIG_PATH
 
 

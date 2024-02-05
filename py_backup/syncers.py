@@ -1,3 +1,4 @@
+import os
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -411,3 +412,47 @@ class Robocopy(SyncABC):
             )
             print(msg)
             result.check_returncode()
+
+
+class DirComparator:
+    """
+    Purpose of class is to compare dir at dir_path with dir at compare_dir_path.
+    """
+    def __init__(self, dir_path: str | Path, compare_dir_path) -> None:
+        self.dir = str(dir_path)
+        self.compare_dir = str(compare_dir_path)
+        self.comparison_dict = {"changed": [], "unique": []}
+    
+    def dir_compare(self, include_unique: bool) -> None:
+        """
+        Note that method ignores unique files in compare_dir.
+        Unique files in dir are included if include_unique=True
+        """
+        def helper(rel_path: str):
+            dir_path = os.path.join(self.dir, rel_path)
+            dir_content = os.scandir(dir_path)
+
+            for dir_entry in dir_content:
+                compare_path = os.path.join(self.compare_dir, rel_path, dir_entry.name)
+                # TODO Handle symlinks?
+
+                if not os.path.exists(compare_path):
+                    if include_unique:
+                        self.comparison_dict["unique"].append(dir_entry.path)
+                    continue
+
+                if dir_entry.is_file():
+                    if not self.files_equal(dir_entry, compare_path):
+                        self.comparison_dict["unique"].append(dir_entry.path)
+                    
+                elif dir_entry.is_dir():
+                    nested_dir_path = os.path.join(rel_path, dir_entry.name)
+                    helper(nested_dir_path)
+                        
+        helper("")
+    
+    @staticmethod
+    def files_equal(dir_entry: os.DirEntry, compare_path: str) -> bool:
+        # TODO write the actual function
+        return True
+

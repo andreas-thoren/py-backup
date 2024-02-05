@@ -1,6 +1,6 @@
 # pylint: skip-file
 from py_backup import folder_backup
-from py_backup.syncers import SyncABC, Robocopy, Rsync
+from py_backup.syncers import DirComparator, Robocopy, Rsync
 
 
 def test_folder_backup():
@@ -52,9 +52,16 @@ def test_config():
     print(Rsync._default_sync_options)
     print(Robocopy._default_sync_options)
 
+def test_dir_comparator():
+    comparator = DirComparator(
+        "/home/ged/Programmering/Projects/handle_file_duplicates/test_data/test_dir",
+        "/home/ged/Programmering/Projects/handle_file_duplicates/test_data/near_copy_test_dir"
+    )
+    result = comparator.dir_compare(True)
+
 
 if __name__ == "__main__":
-    test_folder_backup()
+    test_dir_comparator()
     # test_Robocopy()
     # test_Rsync()
     # test_config()
