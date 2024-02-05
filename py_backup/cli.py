@@ -2,11 +2,26 @@ import argparse
 from . import utils
 
 
+def valid_num_incremental(value: str) -> int:
+    try:
+        ivalue = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(f"{value} is not a valid integer!") from exc
+
+    if ivalue < 2 or ivalue > 100:
+        raise argparse.ArgumentTypeError(
+            "--num-incremental needs to in the range 2-100!"
+        )
+
+    return ivalue
+
+
 def add_common_arguments(subparser: argparse.ArgumentParser):
     subparser.add_argument("source", help="Source directory")
     subparser.add_argument("destination", help="Destination directory")
     subparser.add_argument(
-        "-n", "--dry-run",
+        "-n",
+        "--dry-run",
         action="store_true",
         help="Test run without making any actual changes to see what would happen.",
     )
@@ -49,7 +64,8 @@ def main():
     )
     add_common_arguments(mirror_parser)
     mirror_parser.add_argument(
-        "-b", "--backup-dir",
+        "-b",
+        "--backup-dir",
         default="",
         help="Backup directory for storing backups of files about to be overwritten/deleted.",
     )
@@ -70,7 +86,8 @@ def main():
     )
     add_common_arguments(backup_parser)
     backup_parser.add_argument(
-        "-b", "--backup-dir",
+        "-b",
+        "--backup-dir",
         default="",
         help="Backup directory for storing backups of files about to be overwritten/deleted.",
     )
@@ -78,7 +95,8 @@ def main():
 
     # Incremental backup command
     msg_incremental = (
-        "Mirrors source directory to destination directory:"
+        "Mirrors source directory to destination directory but incrementally "
+        + "backups overwritten/deleted files:"
         + "\n- Backs up deleted and overwritten files to specified backup directory!"
         + "\n- Files/dirs backed up this way will be placed in nested subdirectories"
         + "\n- num_incremental specifies how many of these nested subdirectories will be kept before being deleted."
@@ -95,15 +113,17 @@ def main():
     add_common_arguments(incremental_parser)
 
     incremental_parser.add_argument(
-        "-b", "--backup-dir",
+        "-b",
+        "--backup-dir",
         required=True,
         help="Backup directory for storing backups of files about to be overwritten/deleted.",
     )
 
     incremental_parser.add_argument(
-        "-num", "--num-incremental",
+        "-num",
+        "--num-incremental",
         required=True,
-        type=int,
+        type=valid_num_incremental,
         help="Number of incremental backups to keep",
     )
     incremental_parser.set_defaults(func=incremental)
