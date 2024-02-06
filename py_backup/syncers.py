@@ -424,7 +424,7 @@ class DirComparator:
         self.compare_dir = str(compare_dir)
         self.comparison_dict = {"changed": [], "unique": []}
 
-    def dir_compare(self, include_unique: bool) -> None:
+    def dir_compare(self, include_unique: bool) -> dict[str: list[str]]:
         """
         Note that method ignores unique files in compare_dir.
         Unique files in dir are included if include_unique=True
