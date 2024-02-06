@@ -452,11 +452,12 @@ class DirComparator:
                             continue
 
                         if main_entry.is_dir() and not main_entry.is_symlink():
-                            common_dirs.append(main_entry.path)
+                            common_dirs.append(main_entry.name)
 
             # Recursive relation. Doesnt follow symlinks.
             for common_dir in common_dirs:
-                helper(common_dir)
+                new_rel_path = os.path.join(rel_path, common_dir)
+                helper(new_rel_path)
 
         # If dir doesn't exist return straight away without calling helper.
         if os.path.exists(self.main_dir):
@@ -465,5 +466,18 @@ class DirComparator:
 
     @staticmethod
     def entries_equal(main_entry: os.DirEntry, compare_entry: os.DirEntry) -> bool:
-        # TODO write the actual function
-        return True
+        if main_entry.is_symlink() != compare_entry.is_symlink():
+            return False
+
+        if main_entry.is_dir():
+            return compare_entry.is_dir()
+
+        if main_entry.is_file():
+            if compare_entry.is_file():
+                main_stats = main_entry.stat()
+                compare_stats = compare_entry.stat()
+                return (main_stats.st_mtime == compare_stats.st_mtime) and (
+                    main_stats.st_size == compare_stats.st_size
+                )
+
+        return False
