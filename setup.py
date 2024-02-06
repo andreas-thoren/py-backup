@@ -26,5 +26,5 @@ setup(
         "Operating System :: POSIX :: Linux",
         "Development Status :: 3 - Alpha",
     ],
-    python_requires=">=3.10",
+    python_requires=">=3.11",
 )
