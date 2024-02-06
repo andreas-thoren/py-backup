@@ -418,44 +418,52 @@ class DirComparator:
     """
     Purpose of class is to compare dir at dir_path with dir at compare_dir_path.
     """
-    def __init__(self, dir_path: str | Path, compare_dir_path) -> None:
-        self.dir = str(dir_path)
-        self.compare_dir = str(compare_dir_path)
+
+    def __init__(self, main_dir: str | Path, compare_dir) -> None:
+        self.main_dir = str(main_dir)
+        self.compare_dir = str(compare_dir)
         self.comparison_dict = {"changed": [], "unique": []}
-    
+
     def dir_compare(self, include_unique: bool) -> None:
         """
         Note that method ignores unique files in compare_dir.
         Unique files in dir are included if include_unique=True
         """
+
         def helper(rel_path: str):
-            dir_path = os.path.join(self.dir, rel_path)
-            dir_content = os.scandir(dir_path)
+            main_path = os.path.join(self.main_dir, rel_path)
+            compare_path = os.path.join(self.compare_dir, rel_path)
+            common_dirs = []
 
-            for dir_entry in dir_content:
-                compare_path = os.path.join(self.compare_dir, rel_path, dir_entry.name)
-                # TODO Handle symlinks?
+            with os.scandir(main_path) as main_iterator:
+                with os.scandir(compare_path) as compare_iterator:
+                    compare_dct = {entry.name: entry for entry in compare_iterator}
 
-                if not os.path.exists(compare_path):
-                    if include_unique:
-                        self.comparison_dict["unique"].append(dir_entry.path)
-                    continue
+                    for main_entry in main_iterator:
+                        compare_entry = compare_dct.get(main_entry.name, None)
 
-                if dir_entry.is_file():
-                    if not self.files_equal(dir_entry, compare_path):
-                        self.comparison_dict["changed"].append(dir_entry.path)
-                    
-                elif dir_entry.is_dir():
-                    nested_dir_path = os.path.join(rel_path, dir_entry.name)
-                    helper(nested_dir_path)
-                        
-        if os.path.exists(self.dir):
+                        if compare_entry is None:
+                            if include_unique:
+                                self.comparison_dict["unique"].append(main_entry.path)
+                            continue
+
+                        if not self.entries_equal(main_entry, compare_entry):
+                            self.comparison_dict["changed"].append(main_entry.path)
+                            continue
+
+                        if main_entry.is_dir() and not main_entry.is_symlink():
+                            common_dirs.append(main_entry.path)
+
+            # Recursive relation. Doesnt follow symlinks.
+            for common_dir in common_dirs:
+                helper(common_dir)
+
+        # If dir doesn't exist return straight away without calling helper.
+        if os.path.exists(self.main_dir):
             helper("")
-
         return self.comparison_dict
-    
+
     @staticmethod
-    def files_equal(dir_entry: os.DirEntry, compare_path: str) -> bool:
+    def entries_equal(main_entry: os.DirEntry, compare_entry: os.DirEntry) -> bool:
         # TODO write the actual function
         return True
-

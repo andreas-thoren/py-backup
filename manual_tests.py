@@ -52,11 +52,9 @@ def test_config():
     print(Rsync._default_sync_options)
     print(Robocopy._default_sync_options)
 
+
 def test_dir_comparator():
-    comparator = DirComparator(
-        "tests/destination",
-        "tests/source"
-    )
+    comparator = DirComparator("tests/destination", "tests/source")
     result = comparator.dir_compare(True)
     print(result)
 
