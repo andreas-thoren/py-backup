@@ -422,11 +422,7 @@ class DirComparator:
     def __init__(self, main_dir: str | Path, compare_dir) -> None:
         self.main_dir = str(main_dir)
         self.compare_dir = str(compare_dir)
-        self.comparison_dict = {
-            "changed": [],
-            "unique_main_dir": [],
-            "unique_compare_dir": [],
-        }
+        self.comparison_dict = {"changed": [], "unique": []}
 
     def compare_directories(self) -> dict[str : list[str]]:
         # If dir doesn't exist return straight away.
@@ -448,23 +444,22 @@ class DirComparator:
                     compare_dct = {entry.name: entry for entry in compare_iterator}
 
                     for main_entry in main_iterator:
-                        compare_entry = compare_dct.pop(main_entry.name, None)
+                        compare_entry = compare_dct.get(main_entry.name, None)
 
-                        if compare_entry is None:
-                            self.comparison_dict["unique_main_dir"].append(
-                                main_entry.path
-                            )
-                            continue
-                        if not self.entries_are_equal(main_entry, compare_entry):
-                            self.comparison_dict["changed"].append(main_entry.path)
-                            continue
-                        if main_entry.is_dir() and not main_entry.is_symlink():
-                            common_dirs.append(main_entry.name)
+                        if main_entry.is_dir(follow_symlinks=False):
+                            if compare_entry is None:
+                                self.comparison_dict["unique"].append(main_entry.path)
+                            elif compare_entry.is_dir(follow_symlinks=False):
+                                common_dirs.append(main_entry.name)
+                            else:
+                                self.comparison_dict["changed"].append(main_entry.path)
 
-                    for unique_entry in compare_dct.values():
-                        self.comparison_dict["unique_compare_dir"].append(
-                            unique_entry.path
-                        )
+                        if main_entry.is_file(follow_symlinks=False):
+                            if compare_entry is None:
+                                self.comparison_dict["unique"].append(main_entry.path)
+                            if compare_entry.is_file(follow_symlinks=False):
+                                if not self.files_are_equal(main_entry, compare_entry):
+                                    self.comparison_dict["changed"].append(main_entry.path)
 
         except PermissionError:
             print(f"Could not access {rel_path} . Skipping!")
@@ -480,28 +475,9 @@ class DirComparator:
             self._recursive_scandir_cmpr(new_rel_path)
 
     @staticmethod
-    def entries_are_equal(
+    def files_are_equal(
         main_entry: os.DirEntry, compare_entry: os.DirEntry, tolerance: float = 2
     ) -> bool:
-        """
-        Compare 2 DirEntry:s to decice wether they are equal. Does not compare
-        the paths/names of the entries. Can compare symlinks but will return
-        False if not both are symlinks. Will return true if both entries are dirs.
-        For files both entries need to have the same modification times and size
-        to return True.
-        """
-
-        if main_entry.is_symlink() != compare_entry.is_symlink():
-            return False
-
-        if main_entry.is_dir():
-            return compare_entry.is_dir()
-
-        if not (main_entry.is_file() and compare_entry.is_file()):
-            return False
-
-        # TODO How to handle special files?
-        # TODO If both entries are symlinks that point to files will is_file be try? Test.
 
         try:
             main_stats = main_entry.stat()
