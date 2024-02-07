@@ -8,11 +8,11 @@ Please note that this project is currently in early alpha stage. It is under act
 
 ## Features
 - Cross-platform file synchronization using `rsync` and `robocopy`.
-- Customizable through a straightforward JSON configuration.
+- Customizable through a straightforward TOML configuration.
 - Includes both a functional interface and a class-based interface for flexibility in usage.
 
 ### Prerequisites
-- Python 3.10+
+- Python 3.11+
 - `rsync` on UNIX/Linux or `robocopy` on Windows.
 
 ### Installation
