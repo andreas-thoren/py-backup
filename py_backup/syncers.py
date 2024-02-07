@@ -457,6 +457,7 @@ class DirComparator:
                         if main_entry.is_file(follow_symlinks=False):
                             if compare_entry is None:
                                 self.comparison_dict["unique"].append(main_entry.path)
+                                continue
                             elif compare_entry.is_file(follow_symlinks=False):
                                 if self.files_are_equal(main_entry, compare_entry):
                                     continue
