@@ -435,29 +435,32 @@ class DirComparator:
             compare_path = os.path.join(self.compare_dir, rel_path)
             common_dirs = []
 
-            with os.scandir(main_path) as main_iterator:
-                with os.scandir(compare_path) as compare_iterator:
-                    compare_dct = {entry.name: entry for entry in compare_iterator}
+            try:
+                with os.scandir(main_path) as main_iterator:
+                    with os.scandir(compare_path) as compare_iterator:
+                        compare_dct = {entry.name: entry for entry in compare_iterator}
 
-                    for main_entry in main_iterator:
-                        compare_entry = compare_dct.get(main_entry.name, None)
+                        for main_entry in main_iterator:
+                            compare_entry = compare_dct.get(main_entry.name, None)
 
-                        if compare_entry is None:
-                            if include_unique:
-                                self.comparison_dict["unique"].append(main_entry.path)
-                            continue
+                            if compare_entry is None:
+                                if include_unique:
+                                    self.comparison_dict["unique"].append(main_entry.path)
+                                continue
 
-                        if not self.entries_equal(main_entry, compare_entry):
-                            self.comparison_dict["changed"].append(main_entry.path)
-                            continue
+                            if not self.entries_equal(main_entry, compare_entry):
+                                self.comparison_dict["changed"].append(main_entry.path)
+                                continue
 
-                        if main_entry.is_dir() and not main_entry.is_symlink():
-                            common_dirs.append(main_entry.name)
+                            if main_entry.is_dir() and not main_entry.is_symlink():
+                                common_dirs.append(main_entry.name)
 
-            # Recursive relation. Doesnt follow symlinks.
-            for common_dir in common_dirs:
-                new_rel_path = os.path.join(rel_path, common_dir)
-                helper(new_rel_path)
+                # Recursive relation. Doesnt follow symlinks.
+                for common_dir in common_dirs:
+                    new_rel_path = os.path.join(rel_path, common_dir)
+                    helper(new_rel_path)
+            except PermissionError:
+                print(f"Could not access {rel_path} . Skipping!")
 
         # If dir doesn't exist return straight away without calling helper.
         if os.path.exists(self.main_dir):
