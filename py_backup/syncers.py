@@ -458,8 +458,10 @@ class DirComparator:
                             if compare_entry is None:
                                 self.comparison_dict["unique"].append(main_entry.path)
                             elif compare_entry.is_file(follow_symlinks=False):
-                                if not self.files_are_equal(main_entry, compare_entry):
-                                    self.comparison_dict["changed"].append(main_entry.path)
+                                if self.files_are_equal(main_entry, compare_entry):
+                                    continue
+
+                            self.comparison_dict["changed"].append(main_entry.path)
 
         except PermissionError:
             print(f"Could not access {rel_path} . Skipping!")
