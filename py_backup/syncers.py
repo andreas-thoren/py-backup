@@ -422,65 +422,92 @@ class DirComparator:
     def __init__(self, main_dir: str | Path, compare_dir) -> None:
         self.main_dir = str(main_dir)
         self.compare_dir = str(compare_dir)
-        self.comparison_dict = {"changed": [], "unique": []}
+        self.comparison_dict = {
+            "changed": [],
+            "unique_main_dir": [],
+            "unique_compare_dir": [],
+        }
 
-    def dir_compare(self, include_unique: bool) -> dict[str: list[str]]:
-        """
-        Note that method ignores unique files in compare_dir.
-        Unique files in dir are included if include_unique=True
-        """
-
-        def helper(rel_path: str):
-            main_path = os.path.join(self.main_dir, rel_path)
-            compare_path = os.path.join(self.compare_dir, rel_path)
-            common_dirs = []
-
-            try:
-                with os.scandir(main_path) as main_iterator:
-                    with os.scandir(compare_path) as compare_iterator:
-                        compare_dct = {entry.name: entry for entry in compare_iterator}
-
-                        for main_entry in main_iterator:
-                            compare_entry = compare_dct.get(main_entry.name, None)
-
-                            if compare_entry is None:
-                                if include_unique:
-                                    self.comparison_dict["unique"].append(main_entry.path)
-                                continue
-
-                            if not self.entries_equal(main_entry, compare_entry):
-                                self.comparison_dict["changed"].append(main_entry.path)
-                                continue
-
-                            if main_entry.is_dir() and not main_entry.is_symlink():
-                                common_dirs.append(main_entry.name)
-
-                # Recursive relation. Doesnt follow symlinks.
-                for common_dir in common_dirs:
-                    new_rel_path = os.path.join(rel_path, common_dir)
-                    helper(new_rel_path)
-            except PermissionError:
-                print(f"Could not access {rel_path} . Skipping!")
-
-        # If dir doesn't exist return straight away without calling helper.
+    def compare_directories(self) -> dict[str : list[str]]:
+        # If dir doesn't exist return straight away.
         if os.path.exists(self.main_dir):
-            helper("")
+            self._recursive_scandir_cmpr("")
         return self.comparison_dict
 
+    def _recursive_scandir_cmpr(self, rel_path: str) -> None:
+        """Recursive function called exclusively by dir_compare.
+        Works by recursing down (depth first) dirs by repeatedly calling os.scandir.
+        """
+        main_path = os.path.join(self.main_dir, rel_path)
+        compare_path = os.path.join(self.compare_dir, rel_path)
+        common_dirs = []
+
+        try:
+            with os.scandir(main_path) as main_iterator:
+                with os.scandir(compare_path) as compare_iterator:
+                    compare_dct = {entry.name: entry for entry in compare_iterator}
+
+                    for main_entry in main_iterator:
+                        compare_entry = compare_dct.pop(main_entry.name, None)
+
+                        if compare_entry is None:
+                            self.comparison_dict["unique_main_dir"].append(
+                                main_entry.path
+                            )
+                            continue
+                        if not self.entries_are_equal(main_entry, compare_entry):
+                            self.comparison_dict["changed"].append(main_entry.path)
+                            continue
+                        if main_entry.is_dir() and not main_entry.is_symlink():
+                            common_dirs.append(main_entry.name)
+
+                    for unique_entry in compare_dct.values():
+                        self.comparison_dict["unique_compare_dir"].append(
+                            unique_entry.path
+                        )
+
+        except PermissionError:
+            print(f"Could not access {rel_path} . Skipping!")
+        except OSError as exc:
+            print(
+                f"Unspecfic os error for path {rel_path}\n\nError Info:\n"
+                + f"{exc}\n\nSkipping!"
+            )
+
+        # Recursive relation. Doesnt follow symlinks.
+        for common_dir in common_dirs:
+            new_rel_path = os.path.join(rel_path, common_dir)
+            self._recursive_scandir_cmpr(new_rel_path)
+
     @staticmethod
-    def entries_equal(main_entry: os.DirEntry, compare_entry: os.DirEntry) -> bool:
+    def entries_are_equal(
+        main_entry: os.DirEntry, compare_entry: os.DirEntry, tolerance: float = 2
+    ) -> bool:
+        """
+        Compare 2 DirEntry:s to decice wether they are equal. Does not compare
+        the paths/names of the entries. Can compare symlinks but will return
+        False if not both are symlinks. Will return true if both entries are dirs.
+        For files both entries need to have the same modification times and size
+        to return True.
+        """
+
         if main_entry.is_symlink() != compare_entry.is_symlink():
             return False
 
         if main_entry.is_dir():
             return compare_entry.is_dir()
 
-        if main_entry.is_file():
-            if compare_entry.is_file():
-                main_stats = main_entry.stat()
-                compare_stats = compare_entry.stat()
-                return (main_stats.st_mtime == compare_stats.st_mtime) and (
-                    main_stats.st_size == compare_stats.st_size
-                )
+        if not (main_entry.is_file() and compare_entry.is_file()):
+            return False
 
-        return False
+        # TODO How to handle special files?
+        # TODO If both entries are symlinks that point to files will is_file be try? Test.
+
+        try:
+            main_stats = main_entry.stat()
+            compare_stats = compare_entry.stat()
+            time_diff = abs(main_stats.st_mtime - compare_stats.st_mtime)
+            size_equal = main_stats.st_size == compare_stats.st_size
+            return time_diff <= tolerance and size_equal
+        except OSError:
+            return False
