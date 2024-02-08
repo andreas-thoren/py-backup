@@ -2,6 +2,7 @@ import os
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
+from typing import Iterator
 from .config import RSYNC_DEFAULTS, ROBOCOPY_DEFAULTS
 
 
@@ -446,37 +447,9 @@ class DirComparator:
         try:
             with os.scandir(main_path) as main_iterator:
                 with os.scandir(compare_path) as compare_iterator:
-                    compare_dct = {entry.name: entry for entry in compare_iterator}
-
-                    for main_entry in main_iterator:
-                        compare_entry = compare_dct.get(main_entry.name, None)
-
-                        if main_entry.is_dir(follow_symlinks=False):
-                            if compare_entry is None:
-                                self.comparison_dict["unique_dirs"].append(
-                                    main_entry.path
-                                )
-                            elif compare_entry.is_dir(follow_symlinks=False):
-                                common_dirs.append(main_entry.name)
-                            else:
-                                self.comparison_dict["changed_dirs"].append(
-                                    main_entry.path
-                                )
-
-                        if main_entry.is_file(follow_symlinks=False):
-                            if compare_entry is None:
-                                self.comparison_dict["unique_files"].append(
-                                    main_entry.path
-                                )
-                            elif compare_entry.is_file(follow_symlinks=False):
-                                if not self.files_are_equal(main_entry, compare_entry):
-                                    self.comparison_dict["changed_files"].append(
-                                        main_entry.path
-                                    )
-                            else:
-                                self.comparison_dict["changed_files"].append(
-                                    main_entry.path
-                                )
+                    common_dirs = self._compare_dir_entries(
+                        main_iterator, compare_iterator
+                    )
 
         except PermissionError:
             print(f"Could not access {rel_path} . Skipping!")
@@ -490,6 +463,34 @@ class DirComparator:
         for common_dir in common_dirs:
             new_rel_path = os.path.join(rel_path, common_dir)
             self._recursive_scandir_cmpr(new_rel_path)
+
+    def _compare_dir_entries(
+        self, main_iterator: Iterator, compare_iterator: Iterator
+    ) -> list[str]:
+        compare_dct = {entry.name: entry for entry in compare_iterator}
+        common_dirs = []
+
+        for main_entry in main_iterator:
+            compare_entry = compare_dct.get(main_entry.name, None)
+
+            if main_entry.is_dir(follow_symlinks=False):
+                if compare_entry is None:
+                    self.comparison_dict["unique_dirs"].append(main_entry.path)
+                elif compare_entry.is_dir(follow_symlinks=False):
+                    common_dirs.append(main_entry.name)
+                else:
+                    self.comparison_dict["changed_dirs"].append(main_entry.path)
+
+            if main_entry.is_file(follow_symlinks=False):
+                if compare_entry is None:
+                    self.comparison_dict["unique_files"].append(main_entry.path)
+                elif compare_entry.is_file(follow_symlinks=False):
+                    if not self.files_are_equal(main_entry, compare_entry):
+                        self.comparison_dict["changed_files"].append(main_entry.path)
+                else:
+                    self.comparison_dict["changed_files"].append(main_entry.path)
+
+        return common_dirs
 
     @staticmethod
     def files_are_equal(
