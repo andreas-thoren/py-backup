@@ -476,19 +476,19 @@ class DirComparator:
             if main_entry.is_dir(follow_symlinks=False):
                 if compare_entry is None:
                     self.comparison_dict["unique_dirs"].append(main_entry.path)
-                elif compare_entry.is_dir(follow_symlinks=False):
-                    common_dirs.append(main_entry.name)
-                else:
+                elif not compare_entry.is_dir(follow_symlinks=False):
                     self.comparison_dict["changed_dirs"].append(main_entry.path)
+                else:  # both entries are dirs
+                    common_dirs.append(main_entry.name)
 
             if main_entry.is_file(follow_symlinks=False):
                 if compare_entry is None:
                     self.comparison_dict["unique_files"].append(main_entry.path)
-                elif compare_entry.is_file(follow_symlinks=False):
-                    if not self.files_are_equal(main_entry, compare_entry):
-                        self.comparison_dict["changed_files"].append(main_entry.path)
-                else:
+                elif not compare_entry.is_file(
+                    follow_symlinks=False
+                ) or not self.files_are_equal(main_entry, compare_entry):
                     self.comparison_dict["changed_files"].append(main_entry.path)
+                # If both entries are files and self.files_are_equal == True -> ignore
 
         return common_dirs
 
