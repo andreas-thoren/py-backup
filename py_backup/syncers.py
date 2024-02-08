@@ -422,7 +422,12 @@ class DirComparator:
     def __init__(self, main_dir: str | Path, compare_dir) -> None:
         self.main_dir = str(main_dir)
         self.compare_dir = str(compare_dir)
-        self.comparison_dict = {"changed": [], "unique": []}
+        self.comparison_dict = {
+            "changed_dirs": [],
+            "unique_dirs": [],
+            "changed_files": [],
+            "unique_files": [],
+        }
 
     def compare_directories(self) -> dict[str : list[str]]:
         # If dir doesn't exist return straight away.
@@ -448,21 +453,30 @@ class DirComparator:
 
                         if main_entry.is_dir(follow_symlinks=False):
                             if compare_entry is None:
-                                self.comparison_dict["unique"].append(main_entry.path)
+                                self.comparison_dict["unique_dirs"].append(
+                                    main_entry.path
+                                )
                             elif compare_entry.is_dir(follow_symlinks=False):
                                 common_dirs.append(main_entry.name)
                             else:
-                                self.comparison_dict["changed"].append(main_entry.path)
+                                self.comparison_dict["changed_dirs"].append(
+                                    main_entry.path
+                                )
 
                         if main_entry.is_file(follow_symlinks=False):
                             if compare_entry is None:
-                                self.comparison_dict["unique"].append(main_entry.path)
-                                continue
+                                self.comparison_dict["unique_files"].append(
+                                    main_entry.path
+                                )
                             elif compare_entry.is_file(follow_symlinks=False):
-                                if self.files_are_equal(main_entry, compare_entry):
-                                    continue
-
-                            self.comparison_dict["changed"].append(main_entry.path)
+                                if not self.files_are_equal(main_entry, compare_entry):
+                                    self.comparison_dict["changed_files"].append(
+                                        main_entry.path
+                                    )
+                            else:
+                                self.comparison_dict["changed_files"].append(
+                                    main_entry.path
+                                )
 
         except PermissionError:
             print(f"Could not access {rel_path} . Skipping!")
@@ -481,7 +495,6 @@ class DirComparator:
     def files_are_equal(
         main_entry: os.DirEntry, compare_entry: os.DirEntry, tolerance: float = 2
     ) -> bool:
-
         try:
             main_stats = main_entry.stat()
             compare_stats = compare_entry.stat()
