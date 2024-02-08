@@ -1,0 +1,10 @@
+{
+    "name": "Python 3.11 Dev Container",
+    "image": "mcr.microsoft.com/vscode/devcontainers/python:0-3.11",
+    "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
+    },
+    "extensions": [
+        "ms-python.python"
+    ],
+}
