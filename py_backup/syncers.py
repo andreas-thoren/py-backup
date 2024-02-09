@@ -420,35 +420,63 @@ class DirComparator:
     Purpose of class is to compare dir at dir_path with dir at compare_dir_path.
     """
 
-    def __init__(self, main_dir: str | Path, compare_dir) -> None:
-        self.main_dir = str(main_dir)
-        self.compare_dir = str(compare_dir)
-        self.comparison_dict = {
-            "changed_dirs": [],
-            "unique_dirs": [],
+    def __init__(
+        self, dir1: str | Path, dir2: str | Path, unilateral_compare: bool = False
+    ) -> None:
+        self.dir1 = str(dir1)
+        self.dir2 = str(dir2)
+        self.unilateral_compare = unilateral_compare
+        self.dir_comparison = {
             "changed_files": [],
-            "unique_files": [],
+            "mismatched_paths": [],  # Different types (ex file/dir) on dir1/dir2 side
+            "dir1_unique_dirs": [],
+            "dir1_unique_files": [],
+            "dir2_unique_dirs": [],
+            "dir2_unique_files": [],
         }
+
+    @property
+    def changed_files(self) -> list[str]:
+        return self.dir_comparison["changed_files"]
+
+    @property
+    def mismatched_paths(self) -> list[str]:
+        return self.dir_comparison["mismatched_paths"]
+
+    @property
+    def dir1_unique_dirs(self) -> list[str]:
+        return self.dir_comparison["dir1_unique_dirs"]
+
+    @property
+    def dir1_unique_files(self) -> list[str]:
+        return self.dir_comparison["dir1_unique_files"]
+
+    @property
+    def dir2_unique_dirs(self) -> list[str]:
+        return self.dir_comparison["dir2_unique_dirs"]
+
+    @property
+    def dir2_unique_files(self) -> list[str]:
+        return self.dir_comparison["dir2_unique_files"]
 
     def compare_directories(self) -> dict[str : list[str]]:
         # If dir doesn't exist return straight away.
-        if os.path.exists(self.main_dir):
+        if os.path.exists(self.dir1):
             self._recursive_scandir_cmpr("")
-        return self.comparison_dict
 
     def _recursive_scandir_cmpr(self, rel_path: str) -> None:
         """Recursive function called exclusively by dir_compare.
         Works by recursing down (depth first) dirs by repeatedly calling os.scandir.
         """
-        main_path = os.path.join(self.main_dir, rel_path)
-        compare_path = os.path.join(self.compare_dir, rel_path)
+        dir1_path = os.path.join(self.dir1, rel_path)
+        dir2_path = os.path.join(self.dir2, rel_path)
         common_dirs = []
 
         try:
-            with os.scandir(main_path) as main_iterator:
-                with os.scandir(compare_path) as compare_iterator:
+            with os.scandir(dir1_path) as dir1_iterator:
+                with os.scandir(dir2_path) as dir2_iterator:
                     common_dirs = self._compare_dir_entries(
-                        main_iterator, compare_iterator
+                        rel_path, dir1_iterator, dir2_iterator
                     )
 
         except PermissionError:
@@ -461,46 +489,63 @@ class DirComparator:
 
         # Recursive relation. Doesnt follow symlinks.
         for common_dir in common_dirs:
-            new_rel_path = os.path.join(rel_path, common_dir)
-            self._recursive_scandir_cmpr(new_rel_path)
+            self._recursive_scandir_cmpr(common_dir)
 
     def _compare_dir_entries(
-        self, main_iterator: Iterator, compare_iterator: Iterator
+        self, rel_path: str, dir1_iterator: Iterator, dir2_iterator: Iterator
     ) -> list[str]:
-        compare_dct = {entry.name: entry for entry in compare_iterator}
         common_dirs = []
+        dir2_dct = {entry.name: entry for entry in dir2_iterator}
 
-        for main_entry in main_iterator:
-            compare_entry = compare_dct.get(main_entry.name, None)
+        for dir1_entry in dir1_iterator:
+            dir2_entry = dir2_dct.pop(dir1_entry.name, None)
 
-            if main_entry.is_dir(follow_symlinks=False):
-                if compare_entry is None:
-                    self.comparison_dict["unique_dirs"].append(main_entry.path)
-                elif not compare_entry.is_dir(follow_symlinks=False):
-                    self.comparison_dict["changed_dirs"].append(main_entry.path)
+            if dir1_entry.is_dir(follow_symlinks=False):
+                new_rel_path = os.path.join(rel_path, dir1_entry.name)
+                if dir2_entry is None:
+                    self.dir1_unique_dirs.append(new_rel_path)
+                elif not dir2_entry.is_dir(follow_symlinks=False):
+                    self.mismatched_paths.append(new_rel_path)
                 else:  # both entries are dirs
-                    common_dirs.append(main_entry.name)
+                    common_dirs.append(new_rel_path)
+                continue
 
-            if main_entry.is_file(follow_symlinks=False):
-                if compare_entry is None:
-                    self.comparison_dict["unique_files"].append(main_entry.path)
-                elif not compare_entry.is_file(
-                    follow_symlinks=False
-                ) or not self.files_are_equal(main_entry, compare_entry):
-                    self.comparison_dict["changed_files"].append(main_entry.path)
+            if dir1_entry.is_file(follow_symlinks=False):
+                new_rel_path = os.path.join(rel_path, dir1_entry.name)
+                if dir2_entry is None:
+                    self.dir1_unique_files.append(new_rel_path)
+                elif not dir2_entry.is_file(follow_symlinks=False):
+                    self.mismatched_paths.append(new_rel_path)
+                elif not self.files_are_equal(dir1_entry, dir2_entry):
+                    self.changed_files.append(new_rel_path)
                 # If both entries are files and self.files_are_equal == True -> ignore
+                continue
+
+            if dir2_entry.is_dir(follow_symlinks=False) or dir2_entry.is_file(
+                follow_symlinks=False
+            ):
+                if not self.unilateral_compare:
+                    new_rel_path = os.path.join(rel_path, dir2_entry.name)
+                    self.mismatched_paths.append(new_rel_path)
+
+        if not self.unilateral_compare:
+            for dir2_entry in dir2_dct.values():
+                if dir2_entry.is_dir(follow_symlinks=False):
+                    self.dir2_unique_dirs.append(dir2_entry.path)
+                elif dir2_entry.is_file(follow_symlinks=False):
+                    self.dir2_unique_files.append(dir2_entry.path)
 
         return common_dirs
 
     @staticmethod
     def files_are_equal(
-        main_entry: os.DirEntry, compare_entry: os.DirEntry, tolerance: float = 2
+        dir1_entry: os.DirEntry, dir2_entry: os.DirEntry, tolerance: float = 2
     ) -> bool:
         try:
-            main_stats = main_entry.stat()
-            compare_stats = compare_entry.stat()
-            time_diff = abs(main_stats.st_mtime - compare_stats.st_mtime)
-            size_equal = main_stats.st_size == compare_stats.st_size
+            dir1_stats = dir1_entry.stat()
+            dir2_stats = dir2_entry.stat()
+            time_diff = abs(dir1_stats.st_mtime - dir2_stats.st_mtime)
+            size_equal = dir1_stats.st_size == dir2_stats.st_size
             return time_diff <= tolerance and size_equal
         except OSError:
             return False
