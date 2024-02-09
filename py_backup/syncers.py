@@ -447,6 +447,25 @@ class DirComparator:
         if not self.unilateral_compare:
             self.dir_comparison[f"{self.dir2_name}_unique_dirs"] = []
             self.dir_comparison[f"{self.dir2_name}_unique_files"] = []
+    
+    def get_comparison_result(self) -> str:
+        keys = sorted(list(self.dir_comparison))
+        result = ""
+
+        for key in keys:
+            result += f"\n{key.upper().replace('_', ' ')}:\n"
+            values = "\n".join(self.dir_comparison[key])
+            result += f"{values}\n"
+        
+        return f"{result}"
+
+    @property
+    def dir1(self) -> str:
+        return self._dir1
+
+    @property
+    def dir2(self) -> str:
+        return self._dir2
 
     @property
     def changed_files(self) -> list[str]:
@@ -508,10 +527,10 @@ class DirComparator:
         self, rel_path: str, dir1_iterator: Iterator, dir2_iterator: Iterator
     ) -> list[str]:
         common_dirs = []
-        dir2_dct = {entry.name: entry for entry in dir2_iterator}
+        dir2_entries_dict = {entry.name: entry for entry in dir2_iterator}
 
         for dir1_entry in dir1_iterator:
-            dir2_entry = dir2_dct.pop(dir1_entry.name, None)
+            dir2_entry = dir2_entries_dict.pop(dir1_entry.name, None)
 
             if dir1_entry.is_dir(follow_symlinks=False):
                 # Below function modifies common_dir in place.
@@ -526,7 +545,7 @@ class DirComparator:
                     self.mismatched_paths.append(new_rel_path)
 
         if not self.unilateral_compare:
-            self._add_unique_dir2_entries(dir2_dct, rel_path)
+            self._add_unique_dir2_entries(dir2_entries_dict, rel_path)
 
         return common_dirs
 
@@ -568,8 +587,8 @@ class DirComparator:
         except OSError:
             return False
 
-    def _add_unique_dir2_entries(self, dir2_entry_dict: dict, rel_path: str) -> None:
-        for dir2_entry in dir2_entry_dict.values():
+    def _add_unique_dir2_entries(self, dir2_entries_dict: dict, rel_path: str) -> None:
+        for dir2_entry in dir2_entries_dict.values():
             if dir2_entry.is_dir(follow_symlinks=False):
                 self.dir2_unique_dirs.append(os.path.join(rel_path, dir2_entry.name))
             elif dir2_entry.is_file(follow_symlinks=False):
