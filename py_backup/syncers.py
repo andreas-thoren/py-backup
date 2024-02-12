@@ -2,6 +2,7 @@ import os
 import stat
 import subprocess
 from abc import ABC, abstractmethod
+from enum import Enum, auto
 from pathlib import Path
 from typing import Iterator
 from .config import RSYNC_DEFAULTS, ROBOCOPY_DEFAULTS
@@ -416,22 +417,37 @@ class Robocopy(SyncABC):
             result.check_returncode()
 
 
+class FileType(Enum):
+    FILE = auto()
+    DIR = auto()
+    SYMLINK = auto()
+    JUNCTION = auto()
+    BLOCK_DEVICE = auto()
+    CHARACTER_DEVICE = auto()
+    FIFO = auto()
+    SOCKET = auto()
+    DOOR = auto()
+    EVENT_PORT = auto()
+    WHITEOUT = auto()
+    UNKNOWN = auto()
+
+
 class DirComparator:
     """
     Purpose of class is to compare dir at dir_path with dir at compare_dir_path.
     """
     mode_to_filetype_map = {
-        stat.S_IFDIR: "dir",
-        stat.S_IFREG: "file",
-        stat.S_IFLNK: "symlink",
-        stat.S_IFBLK: "block_device",
-        stat.S_IFCHR: "character_device",
-        stat.S_IFIFO: "FIFO",
-        stat.S_IFSOCK: "socket",
-        stat.S_IFDOOR: "door",
-        stat.S_IFPORT: "event_port",
-        stat.S_IFWHT: "whiteout",
-        0: "unknown"
+        stat.S_IFDIR: FileType.DIR,
+        stat.S_IFREG: FileType.FILE,
+        stat.S_IFLNK: FileType.SYMLINK,
+        stat.S_IFBLK: FileType.BLOCK_DEVICE,
+        stat.S_IFCHR: FileType.CHARACTER_DEVICE,
+        stat.S_IFIFO: FileType.FIFO,
+        stat.S_IFSOCK: FileType.SOCKET,
+        stat.S_IFDOOR: FileType.DOOR,
+        stat.S_IFPORT: FileType.EVENT_PORT,
+        stat.S_IFWHT: FileType.WHITEOUT,
+        0: FileType.UNKNOWN
     }
 
     def __init__(
