@@ -48,11 +48,7 @@ def incremental(args: argparse.Namespace):
 
 def compare(args: argparse.Namespace):
     comparer = DirComparator(
-        args.dir1,
-        args.dir2,
-        args.unilateral_compare,
-        args.dir1_name,
-        args.dir2_name
+        args.dir1, args.dir2, args.unilateral_compare, args.dir1_name, args.dir2_name
     )
     comparer.compare_directories()
     print(comparer.get_comparison_result())
@@ -140,21 +136,23 @@ def main():
         help="Number of incremental backups to keep",
     )
     incremental_parser.set_defaults(func=incremental)
-    
+
     # Compare directory command. Does not do any backups!
-    msg_compare = ("Compares 2 directories. Creates nicely formated output of differences!")
+    msg_compare = (
+        "Compares 2 directories. Creates nicely formated output of differences!"
+    )
     compare_parser = subparsers.add_parser("compare", description=msg_compare)
 
     compare_parser.add_argument("dir1", help="First directory of comparison!")
     compare_parser.add_argument("dir2", help="Second directory of comparison!")
     compare_parser.add_argument(
-        "-u", 
+        "-u",
         "--unilateral-compare",
         action="store_true",
         help=(
             "If set only compares dir1 with dir2 but not the other way around. "
             + "This means that exlusive dir2 items will not be included in result."
-        )
+        ),
     )
     compare_parser.add_argument(
         "--dir1-name",

@@ -54,7 +54,9 @@ def test_config():
 
 
 def test_dir_comparator():
-    comparator = DirComparator("tests/destination", "tests/source", dir1_name="dst", dir2_name="src")
+    comparator = DirComparator(
+        "tests/destination", "tests/source", dir1_name="dst", dir2_name="src"
+    )
     comparator.compare_directories()
     print(comparator.get_comparison_result())
 
