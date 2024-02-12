@@ -1,4 +1,5 @@
 import os
+import stat
 import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -419,6 +420,19 @@ class DirComparator:
     """
     Purpose of class is to compare dir at dir_path with dir at compare_dir_path.
     """
+    mode_to_filetype_map = {
+        stat.S_IFDIR: "dir",
+        stat.S_IFREG: "file",
+        stat.S_IFLNK: "symlink",
+        stat.S_IFBLK: "block_device",
+        stat.S_IFCHR: "character_device",
+        stat.S_IFIFO: "FIFO",
+        stat.S_IFSOCK: "socket",
+        stat.S_IFDOOR: "door",
+        stat.S_IFPORT: "event_port",
+        stat.S_IFWHT: "whiteout",
+        0: "unknown"
+    }
 
     def __init__(
         self, dir1: str | Path, dir2: str | Path, unilateral_compare: bool = False, dir1_name: str = "dir1", dir2_name: str = "dir2"
@@ -593,3 +607,21 @@ class DirComparator:
                 self.dir2_unique_dirs.append(os.path.join(rel_path, dir2_entry.name))
             elif dir2_entry.is_file(follow_symlinks=False):
                 self.dir2_unique_files.append(os.path.join(rel_path, dir2_entry.name))
+    
+    def get_file_type(self, dir_entry: os.DirEntry, follow_symlinks: bool = False) -> str:
+        # Below requires python 3.12. Skip for now. When added -> add before is_dir call.
+        # if dir_entry.is_junction():
+            # return "junction"
+
+        # Exhaust is_* methods first to avoid unneccessary system calls.
+        if dir_entry.is_file(follow_symlinks=follow_symlinks):
+            return "file"
+        if dir_entry.is_dir(follow_symlinks=follow_symlinks):
+            return "dir"
+        if dir_entry.is_symlink():
+            return "symlink"
+        
+        stats = dir_entry.stat(follow_symlinks=follow_symlinks)
+        mode = stat.S_IFMT(stats.st_mode)
+        file_type = self.mode_to_filetype_map.get(mode, "unknown")
+        return file_type
