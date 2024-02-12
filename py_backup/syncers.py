@@ -432,6 +432,14 @@ class FileType(Enum):
     UNKNOWN = auto()
 
 
+class FileStatus(Enum):
+    # Currently only EQUAL, CHANGED is used in the application
+    EQUAL = auto()
+    CHANGED = auto()
+    NEWER = auto()
+    OLDER = auto()
+
+
 class DirComparator:
     """
     Purpose of class is to compare dir at dir_path with dir at compare_dir_path.
@@ -471,6 +479,14 @@ class DirComparator:
         self.dir2_name = dir2_name
         self.unilateral_compare = unilateral_compare
         self.dir_comparison = {}
+    
+    @property
+    def dir1(self) -> str:
+        return self._dir1
+
+    @property
+    def dir2(self) -> str:
+        return self._dir2
 
     def get_comparison_result(self) -> str:
         keys = sorted(list(self.dir_comparison))
@@ -531,21 +547,22 @@ class DirComparator:
         for dir1_entry in dir1_iterator:
             dir2_entry = dir2_entries_dict.pop(dir1_entry.name, None)
             dir1_entry_type = self.get_file_type(dir1_entry, follow_symlinks)
-            # Below function call can potentially return None if input is None
             dir2_entry_type = self.get_file_type(dir2_entry, follow_symlinks)
 
             if dir1_entry_type == dir2_entry_type and dir1_entry_type != FileType.DIR:
-                is_equal_func = self.get_is_equal_func(dir1_entry_type)
-                if not is_equal_func(dir1_entry, dir2_entry):
+                get_file_status = self.get_file_status_func(dir1_entry_type)
+                if get_file_status(dir1_entry, dir2_entry) == FileStatus.CHANGED:
                     entry_rel_path = os.path.join(rel_path, dir1_entry.name)
                     key = f"changed_{dir1_entry_type.name.lower()}s"
                     self.dir_comparison.setdefault(key, []).append(entry_rel_path)
+                # TODO Handle more specific types of inequalities
                 continue
 
             entry_rel_path = os.path.join(rel_path, dir1_entry.name)
 
+            # dir2_entry_type can potentially be None if no matching path exists
             if dir2_entry is None:
-                # Unique dir 1 items
+                # Unique dir1_entry
                 key1 = f"{self.dir1_name}_unique_{dir1_entry_type.name.lower()}s"
                 self.dir_comparison.setdefault(key1, []).append(entry_rel_path)
             elif dir1_entry_type != dir2_entry_type:
@@ -570,19 +587,6 @@ class DirComparator:
 
         return common_dirs
 
-    @staticmethod
-    def files_are_equal(
-        dir1_entry: os.DirEntry, dir2_entry: os.DirEntry, tolerance: float = 2
-    ) -> bool:
-        try:
-            dir1_stats = dir1_entry.stat()
-            dir2_stats = dir2_entry.stat()
-            time_diff = abs(dir1_stats.st_mtime - dir2_stats.st_mtime)
-            size_equal = dir1_stats.st_size == dir2_stats.st_size
-            return time_diff <= tolerance and size_equal
-        except OSError:
-            return False
-
     def get_file_type(
         self, dir_entry: os.DirEntry | None, follow_symlinks: bool = False
     ) -> FileType | None:
@@ -606,12 +610,28 @@ class DirComparator:
         file_type = self.mode_to_filetype_map.get(mode, FileType.UNKNOWN)
         return file_type
 
-    def get_is_equal_func(self, file_type: FileType) -> Callable:
+    def get_file_status_func(self, file_type: FileType) -> Callable:
         if file_type == FileType.FILE:
-            return self.files_are_equal
-        # TODO maybe add more file types in the future
+            return self.get_regular_file_status
         # Right now only files are compared all other types will compare as equal.
-        return lambda x, y: True
+        return lambda x, y: FileStatus.EQUAL
+
+    @staticmethod
+    def get_regular_file_status(
+        dir1_entry: os.DirEntry, dir2_entry: os.DirEntry, tolerance: float = 2
+    ) -> bool:
+        try:
+            dir1_stats = dir1_entry.stat()
+            dir2_stats = dir2_entry.stat()
+            time_diff = abs(dir1_stats.st_mtime - dir2_stats.st_mtime)
+            size_equal = dir1_stats.st_size == dir2_stats.st_size
+            if time_diff <= tolerance and size_equal:
+                return FileStatus.EQUAL
+        except OSError:
+            # Right now OSError will lead to FileStatus.CHANGED being returned
+            # since this means file will be backed up
+            pass
+        return FileStatus.CHANGED
 
     def expand_nested_unique_dirs() -> None:
         # TODO should go through all unique dirs on both sides (in not unilateral_compare)
