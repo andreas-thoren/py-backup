@@ -1,6 +1,7 @@
 # pylint: skip-file
 from py_backup import folder_backup
-from py_backup.syncers import DirComparator, Robocopy, Rsync
+from py_backup.syncers import Robocopy, Rsync
+from py_backup.comparer import DirComparator
 
 
 def test_folder_backup():
