@@ -32,7 +32,7 @@ class InfiniteDirTraversalLoopError(Exception):
     Exception raised when an infinite loop is detected due to symlinks/junctions
     during directory traversal.
     """
-    def __init__(self, path, msg="Infinite traversal loop detected while traversing directories!"):
+    def __init__(self, path, msg="Infinite traversal loop detected while traversing directories"):
         self.path = path
         self.msg = msg
         super().__init__(f"{msg}: {path}")
@@ -119,24 +119,15 @@ class DirComparator:
         dir1_path = os.path.join(self._dir1, rel_path)
         dir2_path = os.path.join(self._dir2, rel_path)
 
-        # TODO Measure overhead of code in if statement
-        # If not to bad maybe always active for junctions?
-        if self._follow_symlinks:
-            try:
-                # Check that dir1 is not previously visited
-                stats1 = os.stat(dir1_path)
-                dirkey1 = (stats1.st_dev, stats1.st_ino)
-                if dirkey1 in self._visited:
-                    raise InfiniteDirTraversalLoopError(path=dir1_path)
-                self._visited.add(dirkey1)
-                # Check that dir2 is not previously visited
-                stats2 = os.stat(dir2_path)
-                dirkey2 = (stats2.st_dev, stats2.st_ino)
-                if dirkey2 in self._visited:
-                    raise InfiniteDirTraversalLoopError(path=dir2_path)
-                self._visited.add(dirkey2)
-            except OSError as exc:
-                print("Cannot protect against loops introduced by symlinks!")
+        try:
+            # Check that dir1 is not previously visited
+            stats1 = os.stat(dir1_path)
+            dirkey1 = (stats1.st_dev, stats1.st_ino)
+            if dirkey1 in self._visited:
+                raise InfiniteDirTraversalLoopError(path=dir1_path)
+            self._visited.add(dirkey1)
+        except OSError as exc:
+            print("Cannot protect against loops introduced by symlinks!")
 
         common_dirs = []  # Needed if _compare_dir_entries raises. Do not remove.
         try:

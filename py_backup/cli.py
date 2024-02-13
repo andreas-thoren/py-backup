@@ -1,5 +1,5 @@
 import argparse
-from .syncers import DirComparator
+from .comparer import DirComparator
 from . import utils
 
 
@@ -47,10 +47,8 @@ def incremental(args: argparse.Namespace):
 
 
 def compare(args: argparse.Namespace):
-    comparer = DirComparator(
-        args.dir1, args.dir2, args.unilateral_compare, args.dir1_name, args.dir2_name
-    )
-    comparer.compare_directories()
+    comparer = DirComparator(args.dir1, args.dir2, args.dir1_name, args.dir2_name)
+    comparer.compare_directories(args.unilateral_compare, args.follow_symlinks)
     print(comparer.get_comparison_result())
 
 
@@ -153,6 +151,12 @@ def main():
             "If set only compares dir1 with dir2 but not the other way around. "
             + "This means that exlusive dir2 items will not be included in result."
         ),
+    )
+    compare_parser.add_argument(
+        "-s",
+        "--follow-symlinks",
+        action="store_true",
+        help=("Treats symlinks as the file/dir they point to."),
     )
     compare_parser.add_argument(
         "--dir1-name",
