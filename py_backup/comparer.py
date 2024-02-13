@@ -27,6 +27,17 @@ class FileStatus(Enum):
     OLDER = auto()
 
 
+class InfiniteDirTraversalLoopError(Exception):
+    """
+    Exception raised when an infinite loop is detected due to symlinks/junctions
+    during directory traversal.
+    """
+    def __init__(self, path, msg="Infinite traversal loop detected while traversing directories!"):
+        self.path = path
+        self.msg = msg
+        super().__init__(f"{msg}: {path}")
+
+
 class DirComparator:
     """
     Purpose of class is to compare dir at dir_path with dir at compare_dir_path.
@@ -50,7 +61,6 @@ class DirComparator:
         self,
         dir1: str | Path,
         dir2: str | Path,
-        unilateral_compare: bool = False,
         dir1_name: str = "dir1",
         dir2_name: str = "dir2",
     ) -> None:
@@ -59,12 +69,17 @@ class DirComparator:
             raise ValueError(f"{dir1} is not the path to an existing dir!")
         if not os.path.exists(dir2):
             raise ValueError(f"{dir2} is not the path to an existing dir!")
+        
+        # TODO add check that dir1 != dir2 and dir1_name != dir2_name
+        # Useful for testing purpuses. Will wait.
 
         self._dir1 = str(dir1)
         self._dir2 = str(dir2)
         self.dir1_name = dir1_name
         self.dir2_name = dir2_name
-        self.unilateral_compare = unilateral_compare
+        self._unilateral_compare = False
+        self._follow_symlinks = False
+        self._visited = None # Will be a set
         self.dir_comparison = {}
 
     @property
@@ -87,26 +102,47 @@ class DirComparator:
         return f"{result}"
 
     def compare_directories(
-        self, follow_symlinks: bool = False
+        self, unilateral_compare: bool = False, follow_symlinks: bool = False
     ) -> dict[str : list[str]]:
+        self._unilateral_compare = unilateral_compare
+        self._follow_symlinks = follow_symlinks
         self.dir_comparison.clear()
-        self._recursive_scandir_cmpr("", follow_symlinks)
+        self._visited = set()
+        self._recursive_scandir_cmpr("")
         return self.dir_comparison.copy()
 
-    def _recursive_scandir_cmpr(self, rel_path: str, follow_symlinks: bool) -> None:
+    def _recursive_scandir_cmpr(self, rel_path: str) -> None:
         """Recursive function called exclusively by dir_compare.
         Works by recursing down (depth first) dirs by repeatedly calling os.scandir.
         """
-        # TODO add protection from infinite loop if follow_symlinks=True
         dir1_path = os.path.join(self._dir1, rel_path)
         dir2_path = os.path.join(self._dir2, rel_path)
-        common_dirs = []  # Needed if _compare_dir_entries raises. Do not remove.
 
+        # TODO Measure overhead of code in if statement
+        # If not to bad maybe always active for junctions?
+        if self._follow_symlinks:
+            try:
+                # Check that dir1 is not previously visited
+                stats1 = os.stat(dir1_path)
+                dirkey1 = (stats1.st_dev, stats1.st_ino)
+                if dirkey1 in self._visited:
+                    raise InfiniteDirTraversalLoopError(path=dir1_path)
+                self._visited.add(dirkey1)
+                # Check that dir2 is not previously visited
+                stats2 = os.stat(dir2_path)
+                dirkey2 = (stats2.st_dev, stats2.st_ino)
+                if dirkey2 in self._visited:
+                    raise InfiniteDirTraversalLoopError(path=dir2_path)
+                self._visited.add(dirkey2)
+            except OSError as exc:
+                print("Cannot protect against loops introduced by symlinks!")
+
+        common_dirs = []  # Needed if _compare_dir_entries raises. Do not remove.
         try:
             with os.scandir(dir1_path) as dir1_iterator:
                 with os.scandir(dir2_path) as dir2_iterator:
                     common_dirs = self._compare_dir_entries(
-                        rel_path, dir1_iterator, dir2_iterator, follow_symlinks
+                        rel_path, dir1_iterator, dir2_iterator
                     )
 
         except PermissionError:
@@ -119,22 +155,21 @@ class DirComparator:
 
         # Recursive relation. Doesnt follow symlinks.
         for common_dir in common_dirs:
-            self._recursive_scandir_cmpr(common_dir, follow_symlinks)
+            self._recursive_scandir_cmpr(common_dir)
 
     def _compare_dir_entries(
         self,
         rel_path: str,
         dir1_iterator: Iterator,
         dir2_iterator: Iterator,
-        follow_symlinks: bool,
     ) -> list[str]:
         common_dirs = []
         dir2_entries_dict = {entry.name: entry for entry in dir2_iterator}
 
         for dir1_entry in dir1_iterator:
             dir2_entry = dir2_entries_dict.pop(dir1_entry.name, None)
-            dir1_entry_type = self.get_file_type(dir1_entry, follow_symlinks)
-            dir2_entry_type = self.get_file_type(dir2_entry, follow_symlinks)
+            dir1_entry_type = self.get_file_type(dir1_entry)
+            dir2_entry_type = self.get_file_type(dir2_entry)
 
             # If dir2_entry_type is None below if statement evaluates to False
             if dir1_entry_type == dir2_entry_type and dir1_entry_type != FileType.DIR:
@@ -155,7 +190,7 @@ class DirComparator:
                 # Type mismatch
                 key1 = f"{self.dir1_name}_mismatched_{dir1_entry_type.name.lower()}s"
                 self.dir_comparison.setdefault(key1, []).append(entry_rel_path)
-                if not self.unilateral_compare:
+                if not self._unilateral_compare:
                     key2 = (
                         f"{self.dir2_name}_mismatched_{dir2_entry_type.name.lower()}s"
                     )
@@ -164,7 +199,7 @@ class DirComparator:
                 # Both entries are dirs
                 common_dirs.append(entry_rel_path)
 
-        if not self.unilateral_compare:
+        if not self._unilateral_compare:
             for unique_entry in dir2_entries_dict.values():
                 entry_type = self.get_file_type(unique_entry)
                 entry_rel_path = os.path.join(rel_path, unique_entry.name)
@@ -173,9 +208,7 @@ class DirComparator:
 
         return common_dirs
 
-    def get_file_type(
-        self, dir_entry: os.DirEntry | None, follow_symlinks: bool = False
-    ) -> FileType | None:
+    def get_file_type(self, dir_entry: os.DirEntry | None) -> FileType | None:
         if dir_entry is None:
             return None
 
@@ -184,14 +217,14 @@ class DirComparator:
         # return "junction"
 
         # Exhaust is_* methods first to avoid unneccessary system calls.
-        if dir_entry.is_file(follow_symlinks=follow_symlinks):
+        if dir_entry.is_file(follow_symlinks=self._follow_symlinks):
             return FileType.FILE
-        if dir_entry.is_dir(follow_symlinks=follow_symlinks):
+        if dir_entry.is_dir(follow_symlinks=self._follow_symlinks):
             return FileType.DIR
         if dir_entry.is_symlink():
             return FileType.SYMLINK
 
-        stats = dir_entry.stat(follow_symlinks=follow_symlinks)
+        stats = dir_entry.stat(follow_symlinks=self._follow_symlinks)
         mode = stat.S_IFMT(stats.st_mode)
         file_type = self.mode_to_filetype_map.get(mode, FileType.UNKNOWN)
         return file_type
