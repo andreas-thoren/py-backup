@@ -58,7 +58,7 @@ def test_dir_comparator():
     comparator = DirComparator(
         "tests/destination", "tests/source", dir1_name="dst", dir2_name="src"
     )
-    comparator.compare_directories(follow_symlinks=True)
+    comparator.compare_directories(follow_symlinks=False)
     print(comparator.get_comparison_result())
 
 
