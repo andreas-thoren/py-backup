@@ -64,17 +64,18 @@ class DirComparator:
         dir1_name: str = "dir1",
         dir2_name: str = "dir2",
     ) -> None:
+        # TODO add docstring that explains the dir1 and dir2 paths should not 
+        # contain symlinks since normpath can then inadvertedly change them
+        self._dir1 = os.path.normpath(str(dir1))
+        self._dir2 = os.path.normpath(str(dir2))
         # Check that both dirs exist
-        if not os.path.exists(dir1):
-            raise ValueError(f"{dir1} is not the path to an existing dir!")
-        if not os.path.exists(dir2):
-            raise ValueError(f"{dir2} is not the path to an existing dir!")
-        
+        if not os.path.exists(self._dir1):
+            raise ValueError(f"{self._dir1} is not the path to an existing dir!")
+        if not os.path.exists(self._dir2):
+            raise ValueError(f"{self._dir2} is not the path to an existing dir!")
+
         # TODO add check that dir1 != dir2 and dir1_name != dir2_name
         # Useful for testing purpuses. Will wait.
-
-        self._dir1 = str(dir1)
-        self._dir2 = str(dir2)
         self.dir1_name = dir1_name
         self.dir2_name = dir2_name
         self._unilateral_compare = False

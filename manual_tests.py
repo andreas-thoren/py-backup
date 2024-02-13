@@ -55,10 +55,16 @@ def test_config():
 
 
 def test_dir_comparator():
+    # Windows testing dirs
+    src = "../source"
+    dst = "../destination"
+    # Linux testing dirs
+    # src = "tests/source"
+    # dst = "tests/destination"
     comparator = DirComparator(
-        "tests/destination", "tests/source", dir1_name="dst", dir2_name="src"
+        dst, src, dir1_name="dst", dir2_name="src"
     )
-    comparator.compare_directories(follow_symlinks=False)
+    comparator.compare_directories(follow_symlinks=True)
     print(comparator.get_comparison_result())
 
 
