@@ -104,7 +104,7 @@ class DirComparator:
             for file_type, type_dct in main_dct.items():
                 for status, entry_list in type_dct.items():
                     headline = (
-                        f"{dct_name.upper()} {status.upper()} {file_type.upper()}:\n"
+                        f"{dct_name.upper()} {status.name} {file_type.name}s:\n"
                     )
                     result += headline
                     for entry in entry_list:
@@ -225,8 +225,8 @@ class DirComparator:
         file_status: FileStatus,
     ) -> None:
         main_dct = self.dir_comparison.setdefault(dct_name, {})
-        type_dct = main_dct.setdefault(f"{file_type.name.lower()}s", {})
-        type_dct.setdefault(file_status.name.lower(), []).append(entry_path)
+        type_dct = main_dct.setdefault(file_type, {})
+        type_dct.setdefault(file_status, []).append(entry_path)
 
     def _get_file_type(self, dir_entry: os.DirEntry | None) -> FileType | None:
         if dir_entry is None:
