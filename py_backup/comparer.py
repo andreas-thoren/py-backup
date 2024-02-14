@@ -20,9 +20,11 @@ class FileType(Enum):
 
 
 class FileStatus(Enum):
-    # Currently only EQUAL, CHANGED is used in the application
     EQUAL = auto()
+    UNIQUE = auto()
+    MISMATCHED = auto()
     CHANGED = auto()
+    # Currently only EQUAL, UNIQUE, MISMATCHED and CHANGED is used in the application
     NEWER = auto()
     OLDER = auto()
 
@@ -92,15 +94,16 @@ class DirComparator:
         return self._dir2
 
     def get_comparison_result(self) -> str:
-        keys = sorted(list(self.dir_comparison))
-        result = ""
-
-        for key in keys:
-            result += f"\n{key.upper().replace('_', ' ')}:\n"
-            values = "\n".join(self.dir_comparison[key])
-            result += f"{values}\n"
-
-        return f"{result}"
+        return str(self.dir_comparison)
+#        keys = sorted(list(self.dir_comparison))
+#        result = ""
+#
+#        for key in keys:
+#            result += f"\n{key.upper().replace('_', ' ')}:\n"
+#            values = "\n".join(self.dir_comparison[key])
+#            result += f"{values}\n"
+#
+#        return f"{result}"
 
     def compare_directories(
         self, unilateral_compare: bool = False, follow_symlinks: bool = False
@@ -162,43 +165,44 @@ class DirComparator:
             dir2_entry = dir2_entries_dict.pop(dir1_entry.name, None)
             dir1_entry_type = self.get_file_type(dir1_entry)
             dir2_entry_type = self.get_file_type(dir2_entry)
+            entry_path = os.path.join(rel_path, dir1_entry.name)
 
             # If dir2_entry_type is None below if statement evaluates to False
             if dir1_entry_type == dir2_entry_type and dir1_entry_type != FileType.DIR:
                 status = self.get_file_status(dir1_entry, dir2_entry, dir1_entry_type)
-
-                if status == FileStatus.CHANGED:
-                    entry_rel_path = os.path.join(rel_path, dir1_entry.name)
-                    key = f"changed_{dir1_entry_type.name.lower()}s"
-                    self.dir_comparison.setdefault(key, []).append(entry_rel_path)
-                continue
-
-            entry_rel_path = os.path.join(rel_path, dir1_entry.name)
-            if dir2_entry is None:
+                # TODO Maybe have flag to include unchanged
+                if status == FileStatus.EQUAL:
+                    continue
+                key = "mutual"
+            elif dir2_entry is None:
                 # Unique dir1_entry
-                key1 = f"{self.dir1_name}_unique_{dir1_entry_type.name.lower()}s"
-                self.dir_comparison.setdefault(key1, []).append(entry_rel_path)
+                status = FileStatus.UNIQUE
+                key = self.dir1_name
             elif dir1_entry_type != dir2_entry_type:
                 # Type mismatch
-                key1 = f"{self.dir1_name}_mismatched_{dir1_entry_type.name.lower()}s"
-                self.dir_comparison.setdefault(key1, []).append(entry_rel_path)
+                status = FileStatus.MISMATCHED
+                key = self.dir1_name
                 if not self._unilateral_compare:
-                    key2 = (
-                        f"{self.dir2_name}_mismatched_{dir2_entry_type.name.lower()}s"
-                    )
-                    self.dir_comparison.setdefault(key2, []).append(entry_rel_path)
+                    self.add_dct_entry(entry_path, self.dir2_name, dir2_entry_type, status)
             else:
                 # Both entries are dirs
-                common_dirs.append(entry_rel_path)
+                common_dirs.append(entry_path)
+                continue
 
-        if not self._unilateral_compare:
+            self.add_dct_entry(entry_path, key, dir1_entry_type, status)
+
+        if not self._unilateral_compare and dir2_entries_dict:
             for unique_entry in dir2_entries_dict.values():
-                entry_type = self.get_file_type(unique_entry)
-                entry_rel_path = os.path.join(rel_path, unique_entry.name)
-                key = f"{self.dir2_name}_unique_{entry_type.name.lower()}s"
-                self.dir_comparison.setdefault(key, []).append(entry_rel_path)
+                entry_path = os.path.join(rel_path, unique_entry.name)
+                file_type = self.get_file_type(unique_entry)
+                self.add_dct_entry(entry_path, self.dir2_name, file_type, FileStatus.UNIQUE)
 
         return common_dirs
+    
+    def add_dct_entry(self, entry_path: str, dct_name: str, file_type: FileType, file_status: FileStatus) -> None:
+        main_dct = self.dir_comparison.setdefault(dct_name, {})
+        type_dct = main_dct.setdefault(f"{file_type.name.lower()}s", {})
+        type_dct.setdefault(file_status.name.lower(), []).append(entry_path)
 
     def get_file_type(self, dir_entry: os.DirEntry | None) -> FileType | None:
         if dir_entry is None:
