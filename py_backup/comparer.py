@@ -103,9 +103,7 @@ class DirComparator:
         for dct_name, main_dct in self.dir_comparison.items():
             for file_type, type_dct in main_dct.items():
                 for status, entry_list in type_dct.items():
-                    headline = (
-                        f"{dct_name.upper()} {status.name} {file_type.name}s:\n"
-                    )
+                    headline = f"{dct_name.upper()} {status.name} {file_type.name}s:\n"
                     result += headline
                     for entry in entry_list:
                         result += f"{entry}\n"
@@ -132,10 +130,10 @@ class DirComparator:
         """
         dir1_path = os.path.join(self._dir1, rel_path)
         dir2_path = os.path.join(self._dir2, rel_path)
-        self._check_visited(dir1_path, strict=False)
         common_dirs = []  # Needed if _compare_dir_entries raises. Do not remove.
 
         try:
+            self._check_visited(dir1_path)
             with os.scandir(dir1_path) as dir1_iterator:
                 with os.scandir(dir2_path) as dir2_iterator:
                     common_dirs = self._compare_dir_entries(
@@ -154,22 +152,12 @@ class DirComparator:
         for common_dir in common_dirs:
             self._recursive_scandir_cmpr(common_dir)
 
-    def _check_visited(self, dir_path: str, strict: bool) -> None:
-        try:
-            # Check that dir is not previously visited
-            stats = os.stat(dir_path)
-            dirkey = (stats.st_dev, stats.st_ino)
-            if dirkey in self._visited:
-                raise InfiniteDirTraversalLoopError(path=dir_path)
-            self._visited.add(dirkey)
-        except OSError as exc:
-            if strict:
-                raise
-            else:
-                print(
-                    f"Cannot check if path {dir_path} is previously visited:\n"
-                    + exc.strerror
-                )
+    def _check_visited(self, dir_path: str) -> None:
+        stats = os.stat(dir_path)
+        dirkey = (stats.st_dev, stats.st_ino)
+        if dirkey in self._visited:
+            raise InfiniteDirTraversalLoopError(path=dir_path)
+        self._visited.add(dirkey)
 
     def _compare_dir_entries(
         self,
@@ -215,7 +203,7 @@ class DirComparator:
             self._add_dct_entry(entry_path, key, dir1_entry_type, status)
 
         if not self._unilateral_compare:
-            # Add remaining (not popped) unique entries in dir2 
+            # Add remaining (not popped) unique entries in dir2
             for unique_entry in dir2_entries_dict.values():
                 entry_path = os.path.join(rel_path, unique_entry.name)
                 file_type = self._get_file_type(unique_entry)
@@ -282,7 +270,7 @@ class DirComparator:
             pass
         return FileStatus.CHANGED
 
-    def _expand_nested_dirs() -> None:
+    def _expand_nested_dirs(self) -> None:
         # TODO should go through all unique dirs on both sides (in not unilateral_compare)
         # and add the nested items to the dir_comparison dict
         pass
