@@ -132,18 +132,9 @@ class DirComparator:
         """
         dir1_path = os.path.join(self._dir1, rel_path)
         dir2_path = os.path.join(self._dir2, rel_path)
-
-        try:
-            # Check that dir1 is not previously visited
-            stats1 = os.stat(dir1_path)
-            dirkey1 = (stats1.st_dev, stats1.st_ino)
-            if dirkey1 in self._visited:
-                raise InfiniteDirTraversalLoopError(path=dir1_path)
-            self._visited.add(dirkey1)
-        except OSError as exc:
-            print("Cannot protect against loops introduced by symlinks!")
-
+        self._check_visited(dir1_path, strict=False)
         common_dirs = []  # Needed if _compare_dir_entries raises. Do not remove.
+
         try:
             with os.scandir(dir1_path) as dir1_iterator:
                 with os.scandir(dir2_path) as dir2_iterator:
@@ -162,6 +153,23 @@ class DirComparator:
         # Recursive relation. Doesnt follow symlinks.
         for common_dir in common_dirs:
             self._recursive_scandir_cmpr(common_dir)
+
+    def _check_visited(self, dir_path: str, strict: bool) -> None:
+        try:
+            # Check that dir is not previously visited
+            stats = os.stat(dir_path)
+            dirkey = (stats.st_dev, stats.st_ino)
+            if dirkey in self._visited:
+                raise InfiniteDirTraversalLoopError(path=dir_path)
+            self._visited.add(dirkey)
+        except OSError as exc:
+            if strict:
+                raise
+            else:
+                print(
+                    f"Cannot check if path {dir_path} is previously visited:\n"
+                    + exc.strerror
+                )
 
     def _compare_dir_entries(
         self,
