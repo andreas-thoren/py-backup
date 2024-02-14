@@ -48,7 +48,10 @@ def incremental(args: argparse.Namespace):
 
 def compare(args: argparse.Namespace):
     comparer = DirComparator(args.dir1, args.dir2, args.dir1_name, args.dir2_name)
-    comparer.compare_directories(args.unilateral_compare, args.follow_symlinks)
+    exclude_equals = not args.include_equals
+    comparer.compare_directories(
+        args.unilateral_compare, args.follow_symlinks, exclude_equals
+    )
     print(comparer.get_comparison_result())
 
 
@@ -157,6 +160,12 @@ def main():
         "--follow-symlinks",
         action="store_true",
         help=("Treats symlinks as the file/dir they point to."),
+    )
+    compare_parser.add_argument(
+        "-i",
+        "--include-equals",
+        action="store_true",
+        help=("Include equal files in the comparison result"),
     )
     compare_parser.add_argument(
         "--dir1-name",
