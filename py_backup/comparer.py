@@ -4,6 +4,7 @@ from enum import Enum, auto
 from pathlib import Path
 from typing import Iterator
 
+
 class FileType(Enum):
     FILE = auto()
     DIR = auto()
@@ -34,7 +35,10 @@ class InfiniteDirTraversalLoopError(Exception):
     Exception raised when an infinite loop is detected due to symlinks/junctions
     during directory traversal.
     """
-    def __init__(self, path, msg="Infinite traversal loop detected while traversing directories"):
+
+    def __init__(
+        self, path, msg="Infinite traversal loop detected while traversing directories"
+    ):
         self.path = path
         self.msg = msg
         super().__init__(f"{msg}: {path}")
@@ -66,7 +70,7 @@ class DirComparator:
         dir1_name: str = "dir1",
         dir2_name: str = "dir2",
     ) -> None:
-        # TODO add docstring that explains the dir1 and dir2 paths should not 
+        # TODO add docstring that explains the dir1 and dir2 paths should not
         # contain symlinks since normpath can then inadvertedly change them
         self._dir1 = os.path.normpath(str(dir1))
         self._dir2 = os.path.normpath(str(dir2))
@@ -82,7 +86,7 @@ class DirComparator:
         self.dir2_name = dir2_name
         self._unilateral_compare = False
         self._follow_symlinks = False
-        self._visited = None # Will be a set
+        self._visited = None  # Will be a set
         self.dir_comparison = {}
 
     @property
@@ -94,16 +98,18 @@ class DirComparator:
         return self._dir2
 
     def get_comparison_result(self) -> str:
-        return str(self.dir_comparison)
-#        keys = sorted(list(self.dir_comparison))
-#        result = ""
-#
-#        for key in keys:
-#            result += f"\n{key.upper().replace('_', ' ')}:\n"
-#            values = "\n".join(self.dir_comparison[key])
-#            result += f"{values}\n"
-#
-#        return f"{result}"
+        result = "\n"
+        for dct_name, main_dct in self.dir_comparison.items():
+            for file_type, type_dct in main_dct.items():
+                for status, entry_list in type_dct.items():
+                    headline = (
+                        f"{dct_name.upper()} {file_type.upper()} {status.upper()}:\n"
+                    )
+                    result += headline
+                    for entry in entry_list:
+                        result += f"{entry}\n"
+                    result += "\n"
+        return result
 
     def compare_directories(
         self, unilateral_compare: bool = False, follow_symlinks: bool = False
@@ -183,7 +189,9 @@ class DirComparator:
                 status = FileStatus.MISMATCHED
                 key = self.dir1_name
                 if not self._unilateral_compare:
-                    self.add_dct_entry(entry_path, self.dir2_name, dir2_entry_type, status)
+                    self.add_dct_entry(
+                        entry_path, self.dir2_name, dir2_entry_type, status
+                    )
             else:
                 # Both entries are dirs
                 common_dirs.append(entry_path)
@@ -195,11 +203,19 @@ class DirComparator:
             for unique_entry in dir2_entries_dict.values():
                 entry_path = os.path.join(rel_path, unique_entry.name)
                 file_type = self.get_file_type(unique_entry)
-                self.add_dct_entry(entry_path, self.dir2_name, file_type, FileStatus.UNIQUE)
+                self.add_dct_entry(
+                    entry_path, self.dir2_name, file_type, FileStatus.UNIQUE
+                )
 
         return common_dirs
-    
-    def add_dct_entry(self, entry_path: str, dct_name: str, file_type: FileType, file_status: FileStatus) -> None:
+
+    def add_dct_entry(
+        self,
+        entry_path: str,
+        dct_name: str,
+        file_type: FileType,
+        file_status: FileStatus,
+    ) -> None:
         main_dct = self.dir_comparison.setdefault(dct_name, {})
         type_dct = main_dct.setdefault(f"{file_type.name.lower()}s", {})
         type_dct.setdefault(file_status.name.lower(), []).append(entry_path)

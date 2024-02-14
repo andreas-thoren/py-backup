@@ -61,9 +61,7 @@ def test_dir_comparator():
     # Linux testing dirs
     # src = "tests/source"
     # dst = "tests/destination"
-    comparator = DirComparator(
-        dst, src, dir1_name="dst", dir2_name="src"
-    )
+    comparator = DirComparator(dst, src, dir1_name="dst", dir2_name="src")
     comparator.compare_directories(follow_symlinks=False)
     print(comparator.get_comparison_result())
 
