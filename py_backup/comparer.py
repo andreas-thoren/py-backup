@@ -174,8 +174,8 @@ class DirComparator:
 
         for dir1_entry in dir1_iterator:
             dir2_entry = dir2_entries_dict.pop(dir1_entry.name, None)
-            dir1_entry_type = self.get_file_type(dir1_entry)
-            dir2_entry_type = self.get_file_type(dir2_entry)
+            dir1_entry_type = self._get_file_type(dir1_entry)
+            dir2_entry_type = self._get_file_type(dir2_entry)
             entry_path = os.path.join(rel_path, dir1_entry.name)
 
             # If dir2_entry_type is None below if statement evaluates to False
@@ -186,7 +186,7 @@ class DirComparator:
                     continue
 
                 # Both entries have same type which are not dirs
-                status = self.get_file_status(dir1_entry, dir2_entry, dir1_entry_type)
+                status = self._get_file_status(dir1_entry, dir2_entry, dir1_entry_type)
                 if status == FileStatus.EQUAL and self._exclude_equal_entries:
                     continue
 
@@ -200,24 +200,24 @@ class DirComparator:
                 status = FileStatus.MISMATCHED
                 key = self.dir1_name
                 if not self._unilateral_compare:
-                    self.add_dct_entry(
+                    self._add_dct_entry(
                         entry_path, self.dir2_name, dir2_entry_type, status
                     )
 
-            self.add_dct_entry(entry_path, key, dir1_entry_type, status)
+            self._add_dct_entry(entry_path, key, dir1_entry_type, status)
 
         if not self._unilateral_compare:
             # Add remaining (not popped) unique entries in dir2 
             for unique_entry in dir2_entries_dict.values():
                 entry_path = os.path.join(rel_path, unique_entry.name)
-                file_type = self.get_file_type(unique_entry)
-                self.add_dct_entry(
+                file_type = self._get_file_type(unique_entry)
+                self._add_dct_entry(
                     entry_path, self.dir2_name, file_type, FileStatus.UNIQUE
                 )
 
         return common_dirs
 
-    def add_dct_entry(
+    def _add_dct_entry(
         self,
         entry_path: str,
         dct_name: str,
@@ -228,7 +228,7 @@ class DirComparator:
         type_dct = main_dct.setdefault(f"{file_type.name.lower()}s", {})
         type_dct.setdefault(file_status.name.lower(), []).append(entry_path)
 
-    def get_file_type(self, dir_entry: os.DirEntry | None) -> FileType | None:
+    def _get_file_type(self, dir_entry: os.DirEntry | None) -> FileType | None:
         if dir_entry is None:
             return None
 
@@ -249,16 +249,16 @@ class DirComparator:
         file_type = self.mode_to_filetype_map.get(mode, FileType.UNKNOWN)
         return file_type
 
-    def get_file_status(
+    def _get_file_status(
         self, dir1_entry: os.DirEntry, dir2_entry: os.DirEntry, file_type: FileType
     ) -> FileType:
         if file_type == FileType.FILE:
-            return self.get_regular_file_status(dir1_entry, dir2_entry)
+            return self._get_regular_file_status(dir1_entry, dir2_entry)
         # Right now only files are compared all other types will compare as equal.
         return FileStatus.EQUAL
 
     @staticmethod
-    def get_regular_file_status(
+    def _get_regular_file_status(
         dir1_entry: os.DirEntry, dir2_entry: os.DirEntry, tolerance: float = 2
     ) -> bool:
         try:
@@ -274,7 +274,7 @@ class DirComparator:
             pass
         return FileStatus.CHANGED
 
-    def expand_nested_unique_dirs() -> None:
+    def _expand_nested_dirs() -> None:
         # TODO should go through all unique dirs on both sides (in not unilateral_compare)
         # and add the nested items to the dir_comparison dict
         pass
