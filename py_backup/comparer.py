@@ -270,7 +270,22 @@ class DirComparator:
             pass
         return FileStatus.CHANGED
 
-    def _expand_nested_dirs(self) -> None:
-        # TODO should go through all unique dirs on both sides (in not unilateral_compare)
-        # and add the nested items to the dir_comparison dict
+    def _expand_dirs(self) -> None:
+        # 1. Fetch unique dirs on both sides
+        dir1_dir_dct = self.dir_comparison.get(self.dir1_name, {}).get(FileType.DIR, {})
+        dir2_dir_dct = self.dir_comparison.get(self.dir2_name, {}).get(FileType.DIR, {})
+        dir1_dirs = [
+            os.path.join(self._dir1, dir)
+            for dirs in dir1_dir_dct.values()
+            for dir in dirs
+        ]
+        dir2_dirs = [
+            os.path.join(self._dir2, dir)
+            for dirs in dir2_dir_dct.values()
+            for dir in dirs
+        ]
+        dirs = dir1_dirs + dir2_dirs
+        # TODO call _expand dirs
+
+    def _expand_dir(self, dir: str) -> None:
         pass
