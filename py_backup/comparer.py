@@ -274,18 +274,28 @@ class DirComparator:
         # 1. Fetch unique dirs on both sides
         dir1_dir_dct = self.dir_comparison.get(self.dir1_name, {}).get(FileType.DIR, {})
         dir2_dir_dct = self.dir_comparison.get(self.dir2_name, {}).get(FileType.DIR, {})
-        dir1_dirs = [
-            os.path.join(self._dir1, dir)
-            for dirs in dir1_dir_dct.values()
-            for dir in dirs
-        ]
-        dir2_dirs = [
-            os.path.join(self._dir2, dir)
-            for dirs in dir2_dir_dct.values()
-            for dir in dirs
-        ]
-        dirs = dir1_dirs + dir2_dirs
-        # TODO call _expand dirs
+        dir1_dirs = [dir for dirs in dir1_dir_dct.values() for dir in dirs]
+        dir2_dirs = [dir for dirs in dir2_dir_dct.values() for dir in dirs]
 
-    def _expand_dir(self, dir: str) -> None:
-        pass
+        # 2. Call _expand dir for all unique/mismatched dirs on both sides
+        for dir1_dir in dir1_dirs:
+            self._expand_dir(self._dir1, self.dir1_name, dir1_dir)
+
+        for dir2_dir in dir2_dirs:
+            self._expand_dir(self._dir2, self.dir2_name, dir2_dir)
+
+    def _expand_dir(self, base_dir: str, base_dir_name: str, dir_rel_path: str) -> None:
+        dir_path = os.path.join(base_dir, dir_rel_path)
+
+        try:
+            self._check_visited(dir_path)
+            with os.scandir(dir_path) as dir_iterator:
+                pass
+
+        except PermissionError:
+            print(f"Could not access {rel_path} . Skipping!")
+        except OSError as exc:
+            print(
+                f"Unspecfic os error for path {rel_path}\n\nError Info:\n"
+                + f"{exc}\n\nSkipping!"
+            )
