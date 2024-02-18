@@ -88,7 +88,11 @@ class DirComparator:
         self._follow_symlinks = False
         self._exclude_equal_entries = True
         self._visited = None  # Will be a set
-        self.dir_comparison = {}
+        self._dir_comparison = {}
+
+    @property
+    def dir_comparison(self) -> dict:
+        return self._dir_comparison.copy()
 
     @property
     def dir1(self) -> str:
@@ -100,7 +104,7 @@ class DirComparator:
 
     def get_comparison_result(self) -> str:
         result = "\n"
-        for dct_name, main_dct in self.dir_comparison.items():
+        for dct_name, main_dct in self._dir_comparison.items():
             for file_type, type_dct in main_dct.items():
                 for status, entry_list in type_dct.items():
                     headline = f"{dct_name.upper()} {status.name} {file_type.name}s:\n"
@@ -115,14 +119,17 @@ class DirComparator:
         unilateral_compare: bool = False,
         follow_symlinks: bool = False,
         exclude_equal_entries: bool = True,
-    ) -> dict[str : list[str]]:
+        expand_dirs: bool = False,
+    ) -> None:
         self._unilateral_compare = unilateral_compare
         self._follow_symlinks = follow_symlinks
         self._exclude_equal_entries = exclude_equal_entries
-        self.dir_comparison.clear()
+        self._dir_comparison.clear()
         self._visited = set()
         self._recursive_scandir_cmpr("")
-        return self.dir_comparison.copy()
+
+        if expand_dirs:
+            self.expand_dirs()
 
     def _recursive_scandir_cmpr(self, rel_path: str) -> None:
         """Recursive function called exclusively by dir_compare.
@@ -220,7 +227,7 @@ class DirComparator:
         file_type: FileType,
         file_status: FileStatus,
     ) -> None:
-        main_dct = self.dir_comparison.setdefault(dct_name, {})
+        main_dct = self._dir_comparison.setdefault(dct_name, {})
         type_dct = main_dct.setdefault(file_type, {})
         type_dct.setdefault(file_status, []).append(entry_path)
 
@@ -228,21 +235,30 @@ class DirComparator:
         if dir_entry is None:
             return None
 
-        # Below requires python 3.12. Skip for now. When added -> add before is_dir call.
-        # if dir_entry.is_junction():
-        # return "junction"
+        try:
+            # Below requires python 3.12. Skip for now. When added -> add before is_dir call.
+            # if dir_entry.is_junction():
+            # return "junction"
 
-        # Exhaust is_* methods first to avoid unneccessary system calls.
-        if dir_entry.is_file(follow_symlinks=self._follow_symlinks):
-            return FileType.FILE
-        if dir_entry.is_dir(follow_symlinks=self._follow_symlinks):
-            return FileType.DIR
-        if dir_entry.is_symlink():
-            return FileType.SYMLINK
+            # Exhaust is_* methods first to avoid unneccessary system calls.
+            if dir_entry.is_file(follow_symlinks=self._follow_symlinks):
+                return FileType.FILE
+            if dir_entry.is_dir(follow_symlinks=self._follow_symlinks):
+                return FileType.DIR
+            if dir_entry.is_symlink():
+                return FileType.SYMLINK
 
-        stats = dir_entry.stat(follow_symlinks=self._follow_symlinks)
-        mode = stat.S_IFMT(stats.st_mode)
-        file_type = self.mode_to_filetype_map.get(mode, FileType.UNKNOWN)
+            stats = dir_entry.stat(follow_symlinks=self._follow_symlinks)
+            mode = stat.S_IFMT(stats.st_mode)
+            file_type = self.mode_to_filetype_map.get(mode, FileType.UNKNOWN)
+        except OSError as exc:
+            print(
+                f"Error while trying to decide file type for {dir_entry}:\n"
+                + f"{exc}\n"
+                + "FileType set to UNKNOWN"
+            )
+            file_type = FileType.UNKNOWN
+
         return file_type
 
     def _get_file_status(
@@ -270,10 +286,14 @@ class DirComparator:
             pass
         return FileStatus.CHANGED
 
-    def _expand_dirs(self) -> None:
+    def expand_dirs(self) -> None:
         # 1. Fetch unique dirs on both sides
-        dir1_dir_dct = self.dir_comparison.get(self.dir1_name, {}).get(FileType.DIR, {})
-        dir2_dir_dct = self.dir_comparison.get(self.dir2_name, {}).get(FileType.DIR, {})
+        dir1_dir_dct = self._dir_comparison.get(self.dir1_name, {}).get(
+            FileType.DIR, {}
+        )
+        dir2_dir_dct = self._dir_comparison.get(self.dir2_name, {}).get(
+            FileType.DIR, {}
+        )
         dir1_dirs = [dir for dirs in dir1_dir_dct.values() for dir in dirs]
         dir2_dirs = [dir for dirs in dir2_dir_dct.values() for dir in dirs]
 
@@ -286,16 +306,28 @@ class DirComparator:
 
     def _expand_dir(self, base_dir: str, base_dir_name: str, dir_rel_path: str) -> None:
         dir_path = os.path.join(base_dir, dir_rel_path)
+        dirs = []
 
         try:
             self._check_visited(dir_path)
             with os.scandir(dir_path) as dir_iterator:
-                pass
+                for dir_entry in dir_iterator:
+                    file_type = self._get_file_type(dir_entry)
+                    entry_path = os.path.join(dir_rel_path, dir_entry.name)
+                    self._add_dct_entry(
+                        entry_path, base_dir_name, file_type, FileStatus.UNIQUE
+                    )
+                    if file_type == FileType.DIR:
+                        dirs.append[entry_path]
 
         except PermissionError:
-            print(f"Could not access {rel_path} . Skipping!")
+            print(f"Could not access {dir_path} . Skipping!")
         except OSError as exc:
             print(
-                f"Unspecfic os error for path {rel_path}\n\nError Info:\n"
+                f"Unspecfic os error for path {dir_path}\n\nError Info:\n"
                 + f"{exc}\n\nSkipping!"
             )
+
+        # Recursive relation
+        for nested_dir_path in dirs:
+            self._expand_dir(base_dir, base_dir_name, nested_dir_path)

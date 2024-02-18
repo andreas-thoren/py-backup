@@ -62,9 +62,12 @@ def test_dir_comparator():
     # src = "tests/source"
     # dst = "tests/destination"
     comparator = DirComparator(dst, src, dir1_name="dst", dir2_name="src")
-    result = comparator.compare_directories(follow_symlinks=False)
-    print(result)
-    print(comparator._expand_dirs())
+    comparator.compare_directories(follow_symlinks=False)
+    print("\nBefore expand_dirs:".upper())
+    print(comparator.get_comparison_result())
+    comparator.expand_dirs()
+    print("After expand dirs:".upper())
+    print(comparator.get_comparison_result())
 
 
 if __name__ == "__main__":
