@@ -1,5 +1,6 @@
 import os
 import stat
+from copy import deepcopy
 from enum import Enum, auto
 from pathlib import Path
 from typing import Iterator
@@ -79,20 +80,20 @@ class DirComparator:
             raise ValueError(f"{self._dir1} is not the path to an existing dir!")
         if not os.path.exists(self._dir2):
             raise ValueError(f"{self._dir2} is not the path to an existing dir!")
+        if self._dir1 == self._dir2:
+            raise ValueError("The directories to be compared cannot be the same!")
+        if dir1_name == dir2_name:
+            raise ValueError("You cannot give the 2 directories the same name!")
 
         # TODO add check that dir1 != dir2 and dir1_name != dir2_name
         # Useful for testing purpuses. Will wait.
-        self.dir1_name = dir1_name
-        self.dir2_name = dir2_name
+        self._dir1_name = dir1_name
+        self._dir2_name = dir2_name
         self._unilateral_compare = False
         self._follow_symlinks = False
         self._exclude_equal_entries = True
         self._visited = None  # Will be a set
         self._dir_comparison = {}
-
-    @property
-    def dir_comparison(self) -> dict:
-        return self._dir_comparison.copy()
 
     @property
     def dir1(self) -> str:
@@ -101,6 +102,18 @@ class DirComparator:
     @property
     def dir2(self) -> str:
         return self._dir2
+
+    @property
+    def dir1_name(self) -> str:
+        return self._dir1_name
+
+    @property
+    def dir2_name(self) -> str:
+        return self._dir2_name
+
+    @property
+    def dir_comparison(self) -> dict:
+        return deepcopy(self._dir_comparison)
 
     def get_comparison_result(self) -> str:
         result = "\n"
@@ -197,14 +210,14 @@ class DirComparator:
             elif dir2_entry is None:
                 # Unique dir1_entry
                 status = FileStatus.UNIQUE
-                key = self.dir1_name
+                key = self._dir1_name
             else:
                 # Not same type and dir2_entry is not None -> type mismatch
                 status = FileStatus.MISMATCHED
-                key = self.dir1_name
+                key = self._dir1_name
                 if not self._unilateral_compare:
                     self._add_dct_entry(
-                        entry_path, self.dir2_name, dir2_entry_type, status
+                        entry_path, self._dir2_name, dir2_entry_type, status
                     )
 
             self._add_dct_entry(entry_path, key, dir1_entry_type, status)
@@ -215,7 +228,7 @@ class DirComparator:
                 entry_path = os.path.join(rel_path, unique_entry.name)
                 file_type = self._get_file_type(unique_entry)
                 self._add_dct_entry(
-                    entry_path, self.dir2_name, file_type, FileStatus.UNIQUE
+                    entry_path, self._dir2_name, file_type, FileStatus.UNIQUE
                 )
 
         return common_dirs
@@ -288,10 +301,10 @@ class DirComparator:
 
     def expand_dirs(self) -> None:
         # 1. Fetch unique dirs on both sides
-        dir1_dir_dct = self._dir_comparison.get(self.dir1_name, {}).get(
+        dir1_dir_dct = self._dir_comparison.get(self._dir1_name, {}).get(
             FileType.DIR, {}
         )
-        dir2_dir_dct = self._dir_comparison.get(self.dir2_name, {}).get(
+        dir2_dir_dct = self._dir_comparison.get(self._dir2_name, {}).get(
             FileType.DIR, {}
         )
         dir1_dirs = [dir for dirs in dir1_dir_dct.values() for dir in dirs]
@@ -299,10 +312,10 @@ class DirComparator:
 
         # 2. Call _expand dir for all unique/mismatched dirs on both sides
         for dir1_dir in dir1_dirs:
-            self._expand_dir(self._dir1, self.dir1_name, dir1_dir)
+            self._expand_dir(self._dir1, self._dir1_name, dir1_dir)
 
         for dir2_dir in dir2_dirs:
-            self._expand_dir(self._dir2, self.dir2_name, dir2_dir)
+            self._expand_dir(self._dir2, self._dir2_name, dir2_dir)
 
     def _expand_dir(self, base_dir: str, base_dir_name: str, dir_rel_path: str) -> None:
         dir_path = os.path.join(base_dir, dir_rel_path)
