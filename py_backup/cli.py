@@ -50,7 +50,7 @@ def compare(args: argparse.Namespace):
     comparer = DirComparator(args.dir1, args.dir2, args.dir1_name, args.dir2_name)
     exclude_equals = not args.include_equals
     comparer.compare_directories(
-        args.unilateral_compare, args.follow_symlinks, exclude_equals
+        args.unilateral_compare, args.follow_symlinks, exclude_equals, args.expand_dirs
     )
     print(comparer.get_comparison_result())
 
@@ -166,6 +166,14 @@ def main():
         "--include-equals",
         action="store_true",
         help=("Include equal files in the comparison result"),
+    )
+    compare_parser.add_argument(
+        "-e",
+        "--expand-dirs",
+        action="store_true",
+        help=(
+            "Expand unique dirs so that all nested files/dirs within gets added to the result"
+        ),
     )
     compare_parser.add_argument(
         "--dir1-name",
