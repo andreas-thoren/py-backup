@@ -3,7 +3,7 @@ import stat
 from copy import deepcopy
 from enum import Enum, auto
 from pathlib import Path
-from typing import Iterator
+from typing import Iterator, Iterable
 
 
 class FileType(Enum):
@@ -50,6 +50,8 @@ class DirComparator:
     Purpose of class is to compare dir at dir_path with dir at compare_dir_path.
     """
 
+    _mutual_key = "mutual"
+
     mode_to_filetype_map = {
         stat.S_IFDIR: FileType.DIR,
         stat.S_IFREG: FileType.FILE,
@@ -75,7 +77,8 @@ class DirComparator:
         # contain symlinks since normpath can then inadvertedly change them
         self._dir1 = os.path.normpath(str(dir1))
         self._dir2 = os.path.normpath(str(dir2))
-        # Check that both dirs exist
+
+        # Error checks
         if not os.path.exists(self._dir1):
             raise ValueError(f"{self._dir1} is not the path to an existing dir!")
         if not os.path.exists(self._dir2):
@@ -85,8 +88,6 @@ class DirComparator:
         if dir1_name == dir2_name:
             raise ValueError("You cannot give the 2 directories the same name!")
 
-        # TODO add check that dir1 != dir2 and dir1_name != dir2_name
-        # Useful for testing purpuses. Will wait.
         self._dir1_name = dir1_name
         self._dir2_name = dir2_name
         self._unilateral_compare = False
@@ -119,13 +120,40 @@ class DirComparator:
         result = "\n"
         for dct_name, main_dct in self._dir_comparison.items():
             for file_type, type_dct in main_dct.items():
-                for status, entry_list in type_dct.items():
+                for status, entry_set in type_dct.items():
                     headline = f"{dct_name.upper()} {status.name} {file_type.name}s:\n"
                     result += headline
-                    for entry in entry_list:
+                    for entry in entry_set:
                         result += f"{entry}\n"
                     result += "\n"
         return result
+
+    def get_entries(
+        self,
+        base_dirs: Iterable[str] | None = None,
+        entry_types: Iterable[FileType] | None = None,
+        entry_statuses: Iterable[FileStatus] | None = None,
+    ) -> list[str]:
+        base_dict = base_dirs or {self._dir1_name, self._dir2_name, self._mutual_key}
+        types = entry_types or set(FileType)
+        statuses = entry_statuses or set(FileStatus)
+
+        entries = []
+
+        for dct_name, main_dct in self._dir_comparison.items():
+            if dct_name not in base_dict:
+                continue
+
+            for file_type, type_dct in main_dct.items():
+                if file_type not in types:
+                    continue
+
+                for status, entry_set in type_dct.items():
+                    if status not in statuses:
+                        continue
+                    entries.extend(entry_set)
+
+        return entries
 
     def compare_directories(
         self,
@@ -206,7 +234,7 @@ class DirComparator:
                 if status == FileStatus.EQUAL and self._exclude_equal_entries:
                     continue
 
-                key = "mutual"
+                key = self._mutual_key
             elif dir2_entry is None:
                 # Unique dir1_entry
                 status = FileStatus.UNIQUE
@@ -242,7 +270,7 @@ class DirComparator:
     ) -> None:
         main_dct = self._dir_comparison.setdefault(dct_name, {})
         type_dct = main_dct.setdefault(file_type, {})
-        type_dct.setdefault(file_status, []).append(entry_path)
+        type_dct.setdefault(file_status, set()).add(entry_path)
 
     def _get_file_type(self, dir_entry: os.DirEntry | None) -> FileType | None:
         if dir_entry is None:
@@ -276,7 +304,7 @@ class DirComparator:
 
     def _get_file_status(
         self, dir1_entry: os.DirEntry, dir2_entry: os.DirEntry, file_type: FileType
-    ) -> FileType:
+    ) -> FileStatus:
         if file_type == FileType.FILE:
             return self._get_regular_file_status(dir1_entry, dir2_entry)
         # Right now only files are compared all other types will compare as equal.
@@ -285,7 +313,7 @@ class DirComparator:
     @staticmethod
     def _get_regular_file_status(
         dir1_entry: os.DirEntry, dir2_entry: os.DirEntry, tolerance: float = 2
-    ) -> bool:
+    ) -> FileStatus:
         try:
             dir1_stats = dir1_entry.stat()
             dir2_stats = dir2_entry.stat()
@@ -331,7 +359,7 @@ class DirComparator:
                         entry_path, base_dir_name, file_type, FileStatus.UNIQUE
                     )
                     if file_type == FileType.DIR:
-                        dirs.append[entry_path]
+                        dirs.append(entry_path)
 
         except PermissionError:
             print(f"Could not access {dir_path} . Skipping!")

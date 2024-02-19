@@ -1,7 +1,23 @@
 # pylint: skip-file
+import os
+import platform
 from py_backup import folder_backup
 from py_backup.syncers import Robocopy, Rsync
-from py_backup.comparer import DirComparator
+from py_backup.comparer import DirComparator, FileType, FileStatus
+
+current_os = platform.system()
+if current_os == "Linux":
+    SOURCE_PATH = "tests/linux_dirs/source"
+    DESTINATION_PATH = "tests/linux_dirs/destination"
+elif current_os == "Windows":
+    SOURCE_PATH = "tests/windows_dirs/source"
+    DESTINATION_PATH = "tests/windows_dirs/destination"
+else:
+    SOURCE_PATH = "tests/non_existing/source"
+    DESTINATION_PATH = "tests/non_existing/destination"
+    
+assert os.path.exists(SOURCE_PATH)
+assert os.path.exists(DESTINATION_PATH)
 
 
 def test_folder_backup():
@@ -55,19 +71,17 @@ def test_config():
 
 
 def test_dir_comparator():
-    # Windows testing dirs
-    src = "../source"
-    dst = "../destination"
-    # Linux testing dirs
-    # src = "tests/source"
-    # dst = "tests/destination"
-    comparator = DirComparator(dst, src, dir1_name="dst", dir2_name="src")
+    comparator = DirComparator(DESTINATION_PATH, SOURCE_PATH, dir1_name="dst", dir2_name="src")
     comparator.compare_directories(follow_symlinks=False)
     print("\nBefore expand_dirs:".upper())
     print(comparator.get_comparison_result())
     comparator.expand_dirs()
     print("After expand dirs:".upper())
     print(comparator.get_comparison_result())
+    print(comparator.dir_comparison)
+    print(
+        comparator.get_entries(["dst", "mutual"], [FileType.FILE], [FileStatus.UNIQUE])
+    )
 
 
 if __name__ == "__main__":
