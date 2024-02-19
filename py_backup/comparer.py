@@ -75,6 +75,7 @@ class DirComparator:
     >>> result = comparator.dir_comparison
     >>> print(result)
     # Indentation below only for readability. Key order is not guaranteed.
+    # Note that FileStatus and FileType members are used as dictionary keys.
     {
         'dir1': {
             <FileType.DIR: 2>: {
@@ -212,24 +213,24 @@ class DirComparator:
         Retrieves a list of entries filtered by specified directories, types, and statuses.
 
         Args:
-            base_dirs (Iterable[str] | None): Directories to include (dir1, dir2, mutual). None for all.
-            entry_types (Iterable[FileType] | None): Types of entries to include. None for all.
-            entry_statuses (Iterable[FileStatus] | None): Statuses to include. None for all.
+            base_dirs (Iterable[str] | None): Optional. Directories to include (dir1, dir2, mutual). None for all.
+            entry_types (Iterable[FileType] | None): Optional. Types of entries to include. None for all.
+            entry_statuses (Iterable[FileStatus] | None): Optional. Statuses to include. None for all.
 
         Returns:
             list[str]: Paths of entries that match the filters.
 
         Example:
-            >>> from py_backup.comparer import DirComparator, FileType, FileStatus
-            >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2", "src", "dst")
-            >>> comparator.compare_directories()
-            >>> dirs = ["src", "mutual"] # Could have used "dir1" instead of "src". Both works.
-            >>> types = [FileType.FILE]
-            >>> statuses = [FileStatus.UNIQUE, FileStatus.CHANGED]
-            >>> comparator.get_entries(dirs, types, statuses)
-            ['path/to/dir1/unique_dir1_file.txt', 'path/to/dir1/changed_mutual_file.txt',
-            'path/to/dir2/changed_mutual_file.txt', ...]
-            # Note that mutual files gets included on both sides (ie twice)
+        >>> from py_backup.comparer import DirComparator, FileType, FileStatus
+        >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2", "src", "dst")
+        >>> comparator.compare_directories()
+        >>> dirs = ["src", "mutual"] # Could have used "dir1" instead of "src". Both works.
+        >>> types = [FileType.FILE]
+        >>> statuses = [FileStatus.UNIQUE, FileStatus.CHANGED]
+        >>> comparator.get_entries(dirs, types, statuses)
+        ['path/to/dir1/unique_dir1_file.txt', 'path/to/dir1/changed_mutual_file.txt',
+        'path/to/dir2/changed_mutual_file.txt', ...]
+        # Note that mutual files gets included on both sides (ie twice)
         """
         if base_dirs:
             subst_map = {"dir1": self._dir1_name, "dir2": self._dir2_name}
@@ -272,6 +273,28 @@ class DirComparator:
         exclude_equal_entries: bool = True,
         expand_dirs: bool = False,
     ) -> None:
+        """
+        Key method of the DirComparator class. Almost all use cases will call this
+        method at least once. Performs the directory comparison based on the
+        provided args. After calling this method you can:
+        - get the results dict with the dir_comparison property
+        - get filtered result entries with the get_entries method
+        - get a formatted result string with the get_comparison_result method.
+
+        Args:
+            unilateral_compare (bool): Optional. If True, compares in one direction only.
+            follow_symlinks (bool): Optional. If True, follows symbolic links.
+            exclude_equal_entries (bool): Optional. If True, equal entries are not listed in the comparison result.
+            expand_dirs (bool): Optional. If True, include items nested in unique dirs
+
+        Example:
+        >>> from py_backup.comparer import DirComparator
+        >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2")
+        >>> comparator.compare_directories(expand_dirs=True, exclude_equal_entries=False)
+        >>> result = comparator.dir_comparison
+        # Do something with the result. Note that with the options above all items
+        # in the compared directories will be included in the result.
+        """
         self._unilateral_compare = unilateral_compare
         self._follow_symlinks = follow_symlinks
         self._exclude_equal_entries = exclude_equal_entries
@@ -281,6 +304,52 @@ class DirComparator:
 
         if expand_dirs:
             self.expand_dirs()
+
+    def expand_dirs(self) -> None:
+        # 1. Fetch unique dirs on both sides
+        dir1_dir_dct = self._dir_comparison.get(self._dir1_name, {}).get(
+            FileType.DIR, {}
+        )
+        dir2_dir_dct = self._dir_comparison.get(self._dir2_name, {}).get(
+            FileType.DIR, {}
+        )
+        dir1_dirs = [dir for dirs in dir1_dir_dct.values() for dir in dirs]
+        dir2_dirs = [dir for dirs in dir2_dir_dct.values() for dir in dirs]
+
+        # 2. Call _expand dir for all unique/mismatched dirs on both sides
+        for dir1_dir in dir1_dirs:
+            self._expand_dir(self._dir1, self._dir1_name, dir1_dir)
+
+        for dir2_dir in dir2_dirs:
+            self._expand_dir(self._dir2, self._dir2_name, dir2_dir)
+
+    def _expand_dir(self, base_dir: str, base_dir_name: str, dir_rel_path: str) -> None:
+        dir_path = os.path.join(base_dir, dir_rel_path)
+        dirs = []
+
+        try:
+            self._check_visited(dir_path)
+            with os.scandir(dir_path) as dir_iterator:
+                for dir_entry in dir_iterator:
+                    file_type = self._get_file_type(dir_entry)
+                    entry_path = os.path.join(dir_rel_path, dir_entry.name)
+                    self._add_dct_entry(
+                        entry_path, base_dir_name, file_type, FileStatus.UNIQUE
+                    )
+                    if file_type == FileType.DIR:
+                        dirs.append(entry_path)
+
+        except PermissionError:
+            print(f"Could not access {dir_path} . Skipping!")
+        except OSError as exc:
+            print(
+                f"Unspecfic os error for path {dir_path}\n\nError Info:\n"
+                + f"{exc}\n\nSkipping!"
+            )
+
+        # Recursive relation
+        for nested_dir_path in dirs:
+            self._expand_dir(base_dir, base_dir_name, nested_dir_path)
 
     def _recursive_scandir_cmpr(self, rel_path: str) -> None:
         """Recursive function called exclusively by dir_compare.
@@ -436,49 +505,3 @@ class DirComparator:
             # since this means file will be backed up
             pass
         return FileStatus.CHANGED
-
-    def expand_dirs(self) -> None:
-        # 1. Fetch unique dirs on both sides
-        dir1_dir_dct = self._dir_comparison.get(self._dir1_name, {}).get(
-            FileType.DIR, {}
-        )
-        dir2_dir_dct = self._dir_comparison.get(self._dir2_name, {}).get(
-            FileType.DIR, {}
-        )
-        dir1_dirs = [dir for dirs in dir1_dir_dct.values() for dir in dirs]
-        dir2_dirs = [dir for dirs in dir2_dir_dct.values() for dir in dirs]
-
-        # 2. Call _expand dir for all unique/mismatched dirs on both sides
-        for dir1_dir in dir1_dirs:
-            self._expand_dir(self._dir1, self._dir1_name, dir1_dir)
-
-        for dir2_dir in dir2_dirs:
-            self._expand_dir(self._dir2, self._dir2_name, dir2_dir)
-
-    def _expand_dir(self, base_dir: str, base_dir_name: str, dir_rel_path: str) -> None:
-        dir_path = os.path.join(base_dir, dir_rel_path)
-        dirs = []
-
-        try:
-            self._check_visited(dir_path)
-            with os.scandir(dir_path) as dir_iterator:
-                for dir_entry in dir_iterator:
-                    file_type = self._get_file_type(dir_entry)
-                    entry_path = os.path.join(dir_rel_path, dir_entry.name)
-                    self._add_dct_entry(
-                        entry_path, base_dir_name, file_type, FileStatus.UNIQUE
-                    )
-                    if file_type == FileType.DIR:
-                        dirs.append(entry_path)
-
-        except PermissionError:
-            print(f"Could not access {dir_path} . Skipping!")
-        except OSError as exc:
-            print(
-                f"Unspecfic os error for path {dir_path}\n\nError Info:\n"
-                + f"{exc}\n\nSkipping!"
-            )
-
-        # Recursive relation
-        for nested_dir_path in dirs:
-            self._expand_dir(base_dir, base_dir_name, nested_dir_path)
