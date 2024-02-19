@@ -69,7 +69,6 @@ class DirComparator:
         dir2_name (str): Identifier for the second directory in comparison results.
 
     Example:
-    >>> import json # Imported to be able to print dictionary in nice format
     >>> from py_backup.comparer import DirComparator
     >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2")
     >>> comparator.compare_directories()
