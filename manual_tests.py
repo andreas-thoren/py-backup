@@ -79,10 +79,12 @@ def test_dir_comparator():
     comparator.expand_dirs()
     print("After expand dirs:".upper())
     print(comparator.get_comparison_result())
-    print(json.dumps(comparator.dir_comparison, indent=4))
-    print(
-        comparator.get_entries(["dst", "mutual"], [FileType.FILE], [FileStatus.UNIQUE])
-    )
+    entries = comparator.get_entries(["dst", "mutual"], [FileType.FILE], [FileStatus.UNIQUE, FileStatus.CHANGED])
+    print("[")
+    for entry in entries:
+        print(f"    {entry},")
+    print("]")
+  
 
 
 if __name__ == "__main__":

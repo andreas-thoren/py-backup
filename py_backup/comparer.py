@@ -75,7 +75,21 @@ class DirComparator:
     >>> comparator.compare_directories()
     >>> result = comparator.dir_comparison
     >>> print(result)
-    {'dir1': {<FileType.FILE: 1>: {<FileStatus.UNIQUE: 2>: {'dir1_file.txt'}}}, ...}
+    # Indentation below only for readability. Key order is not guaranteed.
+    {
+        'dir1': {
+            <FileType.DIR: 2>: {
+                <FileStatus.UNIQUE: 2>: {'rel_path/to/sample/dir', ...}
+            },
+            <FileType.FILE: 1>: {...}
+        },
+        'mutual': {
+            <FileType.FILE: 1>: {
+                <FileStatus.CHANGED: 2>: {'rel_path/to/sample/file, ...}
+            } 
+        }
+        'dir2': ... # Same nesting as above
+    }
     """
     _mutual_key = "mutual"
 
@@ -196,7 +210,7 @@ class DirComparator:
         """
         Retrieves a list of entries filtered by specified directories, types, and statuses.
 
-        Parameters:
+        Args:
             base_dirs (Iterable[str] | None): Directories to include (dir1, dir2, mutual). None for all.
             entry_types (Iterable[FileType] | None): Types of entries to include. None for all.
             entry_statuses (Iterable[FileStatus] | None): Statuses to include. None for all.
@@ -212,16 +226,23 @@ class DirComparator:
             >>> types = [FileType.FILE]
             >>> statuses = [FileStatus.UNIQUE, FileStatus.CHANGED]
             >>> comparator.get_entries(dirs, types, statuses)
-            ['unique_src_file.txt', 'changed_mutual_file.txt', ...]
+            ['path/to/dir1/unique_dir1_file.txt', 'path/to/dir1/changed_mutual_file.txt',
+            'path/to/dir2/changed_mutual_file.txt', ...]
+            # Note that mutual files gets included on both sides (ie twice)
         """
-        base_dict = base_dirs or {self._dir1_name, self._dir2_name, self._mutual_key}
-        types = entry_types or set(FileType)
-        statuses = entry_statuses or set(FileStatus)
+        bases = set(base_dirs) if base_dirs else {self._dir1_name, self._dir2_name, self._mutual_key}
+        types = set(entry_types) if entry_types else set(FileType)
+        statuses = set(entry_statuses) if entry_statuses else set(FileStatus)
+        base_to_root_path_map = {
+            self._dir1_name: (self._dir1,),
+            self._dir2_name: (self._dir2,),
+            self._mutual_key: (self._dir1, self._dir2)
+        }
 
         entries = []
 
         for dct_name, main_dct in self._dir_comparison.items():
-            if dct_name not in base_dict:
+            if dct_name not in bases:
                 continue
 
             for file_type, type_dct in main_dct.items():
@@ -231,7 +252,11 @@ class DirComparator:
                 for status, entry_set in type_dct.items():
                     if status not in statuses:
                         continue
-                    entries.extend(entry_set)
+
+                    root_paths = base_to_root_path_map[dct_name]
+                    for root_path in root_paths:
+                        paths = [ os.path.join(root_path, entry) for entry in entry_set ]
+                        entries.extend(paths)
 
         return entries
 
