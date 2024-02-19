@@ -172,10 +172,11 @@ class DirComparator:
 
     def get_comparison_result(self) -> str:
         """
-        Compiles and returns a string summarizing the comparison results between the two directories.
+        Creates and returns a formatted multiline string summarizing 
+        the comparison results between the two directories.
 
         Returns:
-            A formatted string listing the differences and similarities by file type and status.
+            A formatted string representing the comparison result.
 
         Example:
         >>> from py_backup.comparer import DirComparator
@@ -229,19 +230,23 @@ class DirComparator:
             'path/to/dir2/changed_mutual_file.txt', ...]
             # Note that mutual files gets included on both sides (ie twice)
         """
-        bases = set(base_dirs) if base_dirs else {self._dir1_name, self._dir2_name, self._mutual_key}
+        if base_dirs:
+            subst_map = {"dir1": self._dir1_name, "dir2": self._dir2_name}
+            base_dirs = { subst_map.get(base_dir, base_dir) for base_dir in base_dirs }
+        else:
+            base_dirs = {self._dir1_name, self._dir2_name, self._mutual_key}
+
         types = set(entry_types) if entry_types else set(FileType)
         statuses = set(entry_statuses) if entry_statuses else set(FileStatus)
+        entries = []
         base_to_root_path_map = {
             self._dir1_name: (self._dir1,),
             self._dir2_name: (self._dir2,),
             self._mutual_key: (self._dir1, self._dir2)
         }
 
-        entries = []
-
         for dct_name, main_dct in self._dir_comparison.items():
-            if dct_name not in bases:
+            if dct_name not in base_dirs:
                 continue
 
             for file_type, type_dct in main_dct.items():
