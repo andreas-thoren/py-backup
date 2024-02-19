@@ -273,7 +273,7 @@ class Rsync(SyncABC):
                                         and the last element the dst_dir.
 
         Examples:
-        >>> rsync = Rsync('tests/source', 'tests/destination')
+        >>> rsync = Rsync('tests/linux_dirs/source', 'tests/linux_dirs/destination')
         >>> rsync.get_args(['--archive'], delete=False, dry_run=True) # doctest: +ELLIPSIS
         ['rsync', '--archive', '--dry-run', ..., ...]
         >>> rsync.get_args(['-ai'], delete=True, dry_run=False) # doctest: +ELLIPSIS
@@ -306,15 +306,15 @@ class Rsync(SyncABC):
 
         Examples:
         >>> from pathlib import Path
-        >>> args = ['rsync', '-av', '--delete', 'tests/source/', 'tests/destination/']
-        >>> backup = Path('tests/backup_dir')
-        >>> rsync = Rsync('tests/source', 'tests/destination')
+        >>> args = ['rsync', '-av', '--delete', 'tests/linux_dirs/source/', 'tests/linux_dirs/destination/']
+        >>> backup = Path('tests/linux_dirs/backup_dir')
+        >>> rsync = Rsync('tests/linux_dirs/source', 'tests/linux_dirs/destination')
         >>> rsync.backup(backup, None, args)
         >>> args  # doctest: +ELLIPSIS
-        ['rsync', '-av', '--delete', '--backup', '--backup-dir=...backup_dir', '...tests/source/', '...tests/destination/']
+        ['rsync', '-av', '--delete', '--backup', '--backup-dir=...backup_dir', '...tests/linux_dirs/source/', '...tests/linux_dirs/destination/']
 
         Demonstrates removal of existing backup options before adding new ones:
-        >>> args = ['rsync', '-av', '--delete', '--backup', '--backup-dir=old/dir', 'tests/source/', 'tests/destination/']
+        >>> args = ['rsync', '-av', '--delete', '--backup', '--backup-dir=old/dir', 'tests/linux_dirs/source/', 'tests/linux_dirs/destination/']
         >>> rsync.backup(backup, None, args)
         >>> args  # doctest: +ELLIPSIS
         ['rsync', '-av', '--delete', '--backup', '--backup-dir=...backup_dir...', '...source...', '...tests...']
@@ -353,7 +353,7 @@ class Robocopy(SyncABC):
                                          destination paths, followed by a list of all other options.
 
         Examples:
-        >>> robocopy = Robocopy('tests/source', 'tests/destination')
+        >>> robocopy = Robocopy('tests/windows_dirs/source', 'tests/windows_dirs/destination')
         >>> robocopy.get_args(['/MIR'], delete=False, dry_run=True) # doctest: +ELLIPSIS
         ['robocopy', ..., ..., '/MIR', '/L']
         >>> robocopy.get_args(['/R:3'], True, False) # doctest: +ELLIPSIS
@@ -390,8 +390,8 @@ class Robocopy(SyncABC):
 
         Examples:
         >>> import subprocess
-        >>> syncer = Robocopy("tests/source", "tests/destination")
-        >>> args = ["rsync", "-a", "-i", "tests/source", "tests/destination"]
+        >>> syncer = Robocopy("tests/windows_dirs/source", "tests/windows_dirs/destination")
+        >>> args = ["robocopy", "tests/windows_dirs/source", "tests/windows_dirs/destination", "/E"]
         >>> result = subprocess.CompletedProcess(args, 8)
         >>> syncer.handle_returncode(result) # doctest: +ELLIPSIS
         Traceback (most recent call last):
@@ -403,7 +403,6 @@ class Robocopy(SyncABC):
         No error!
         """
 
-        # subprocess.CalledProcessError: Command '['rsync', '-a', '-i', 'tests/source', 'tests/destination']' returned non-zero exit status 8.
         if result.returncode > 7:
             msg = (
                 "Robocopy copy operation encountered an issue!\n"
