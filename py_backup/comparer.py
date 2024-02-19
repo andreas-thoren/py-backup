@@ -1,3 +1,15 @@
+"""
+This module provides functionality to compare two directories, identifying files and
+subdirectories that are equal, unique, mismatched in type, or have content changes.
+
+It defines:
+- `FileType` Enum: Represents different types of file system objects.
+- `FileStatus` Enum: Describes the comparison result between corresponding entries in the two directories.
+- `InfiniteDirTraversalLoopError` Exception: Custom exception for infinite traversal loops.
+- `DirComparator` Class: Main class for comparing directories.
+
+Example usage is provided in the `DirComparator` class docstring.
+"""
 import os
 import stat
 from copy import deepcopy
@@ -47,9 +59,24 @@ class InfiniteDirTraversalLoopError(Exception):
 
 class DirComparator:
     """
-    Purpose of class is to compare dir at dir_path with dir at compare_dir_path.
-    """
+    Compares two directories, reporting on differences and similarities
+    between them, including file types and statuses.
 
+    Attributes:
+        dir1 (str | Path): Path to the first directory.
+        dir2 (str | Path): Path to the second directory.
+        dir1_name (str): Identifier for the first directory in comparison results.
+        dir2_name (str): Identifier for the second directory in comparison results.
+
+    Example:
+    >>> import json # Imported to be able to print dictionary in nice format
+    >>> from py_backup.comparer import DirComparator
+    >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2")
+    >>> comparator.compare_directories()
+    >>> result = comparator.dir_comparison
+    >>> print(result)
+    {'dir1': {<FileType.FILE: 1>: {<FileStatus.UNIQUE: 2>: {'dir1_file.txt'}}}, ...}
+    """
     _mutual_key = "mutual"
 
     mode_to_filetype_map = {
@@ -73,6 +100,20 @@ class DirComparator:
         dir1_name: str = "dir1",
         dir2_name: str = "dir2",
     ) -> None:
+        """
+        Initializes the DirComparator with two directories to compare.
+
+        Args:
+            dir1 (str | Path): The first directory to compare.
+            dir2 (str | Path): The second directory to compare.
+            dir1_name (str): Optional. A name to represent the first directory in comparison results.
+            dir2_name (str): Optional. A name to represent the second directory in comparison results.
+
+        Raises:
+            ValueError: If either directory does not exist,
+                if the same directory is provided for both,
+                or if the names are identical.
+        """
         # TODO add docstring that explains the dir1 and dir2 paths should not
         # contain symlinks since normpath can then inadvertedly change them
         self._dir1 = os.path.normpath(str(dir1))
@@ -117,6 +158,24 @@ class DirComparator:
         return deepcopy(self._dir_comparison)
 
     def get_comparison_result(self) -> str:
+        """
+        Compiles and returns a string summarizing the comparison results between the two directories.
+
+        Returns:
+            A formatted string listing the differences and similarities by file type and status.
+
+        Example:
+        >>> from py_backup.comparer import DirComparator
+        >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2")
+        >>> comparator.compare_directories()
+        >>> print(comparator.get_comparison_result())
+        DIR1 UNIQUE FILEs:
+        path/to/dir1/unique_file.txt
+       
+        DIR2 UNIQUE FILEs:
+        path/to/dir2/unique_file2.txt
+        ...
+        """
         result = "\n"
         for dct_name, main_dct in self._dir_comparison.items():
             for file_type, type_dct in main_dct.items():
@@ -134,6 +193,27 @@ class DirComparator:
         entry_types: Iterable[FileType] | None = None,
         entry_statuses: Iterable[FileStatus] | None = None,
     ) -> list[str]:
+        """
+        Retrieves a list of entries filtered by specified directories, types, and statuses.
+
+        Parameters:
+            base_dirs (Iterable[str] | None): Directories to include (dir1, dir2, mutual). None for all.
+            entry_types (Iterable[FileType] | None): Types of entries to include. None for all.
+            entry_statuses (Iterable[FileStatus] | None): Statuses to include. None for all.
+
+        Returns:
+            list[str]: Paths of entries that match the filters.
+
+        Example:
+            >>> from py_backup.comparer import DirComparator, FileType, FileStatus
+            >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2", "src", "dst")
+            >>> comparator.compare_directories()
+            >>> dirs = ["src", "mutual"]
+            >>> types = [FileType.FILE]
+            >>> statuses = [FileStatus.UNIQUE, FileStatus.CHANGED]
+            >>> comparator.get_entries(dirs, types, statuses)
+            ['unique_src_file.txt', 'changed_mutual_file.txt', ...]
+        """
         base_dict = base_dirs or {self._dir1_name, self._dir2_name, self._mutual_key}
         types = entry_types or set(FileType)
         statuses = entry_statuses or set(FileStatus)
