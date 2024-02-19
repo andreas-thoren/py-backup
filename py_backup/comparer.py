@@ -85,11 +85,12 @@ class DirComparator:
         'mutual': {
             <FileType.FILE: 1>: {
                 <FileStatus.CHANGED: 2>: {'rel_path/to/sample/file, ...}
-            } 
+            }
         }
         'dir2': ... # Same nesting as above
     }
     """
+
     _mutual_key = "mutual"
 
     mode_to_filetype_map = {
@@ -172,7 +173,7 @@ class DirComparator:
 
     def get_comparison_result(self) -> str:
         """
-        Creates and returns a formatted multiline string summarizing 
+        Creates and returns a formatted multiline string summarizing
         the comparison results between the two directories.
 
         Returns:
@@ -185,7 +186,7 @@ class DirComparator:
         >>> print(comparator.get_comparison_result())
         DIR1 UNIQUE FILEs:
         path/to/dir1/unique_file.txt
-       
+
         DIR2 UNIQUE FILEs:
         path/to/dir2/unique_file2.txt
         ...
@@ -222,7 +223,7 @@ class DirComparator:
             >>> from py_backup.comparer import DirComparator, FileType, FileStatus
             >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2", "src", "dst")
             >>> comparator.compare_directories()
-            >>> dirs = ["src", "mutual"]
+            >>> dirs = ["src", "mutual"] # Could have used "dir1" instead of "src". Both works.
             >>> types = [FileType.FILE]
             >>> statuses = [FileStatus.UNIQUE, FileStatus.CHANGED]
             >>> comparator.get_entries(dirs, types, statuses)
@@ -232,7 +233,7 @@ class DirComparator:
         """
         if base_dirs:
             subst_map = {"dir1": self._dir1_name, "dir2": self._dir2_name}
-            base_dirs = { subst_map.get(base_dir, base_dir) for base_dir in base_dirs }
+            base_dirs = {subst_map.get(base_dir, base_dir) for base_dir in base_dirs}
         else:
             base_dirs = {self._dir1_name, self._dir2_name, self._mutual_key}
 
@@ -242,7 +243,7 @@ class DirComparator:
         base_to_root_path_map = {
             self._dir1_name: (self._dir1,),
             self._dir2_name: (self._dir2,),
-            self._mutual_key: (self._dir1, self._dir2)
+            self._mutual_key: (self._dir1, self._dir2),
         }
 
         for dct_name, main_dct in self._dir_comparison.items():
@@ -259,7 +260,7 @@ class DirComparator:
 
                     root_paths = base_to_root_path_map[dct_name]
                     for root_path in root_paths:
-                        paths = [ os.path.join(root_path, entry) for entry in entry_set ]
+                        paths = [os.path.join(root_path, entry) for entry in entry_set]
                         entries.extend(paths)
 
         return entries
