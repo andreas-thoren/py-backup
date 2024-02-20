@@ -82,7 +82,7 @@ def test_dir_comparator():
     print(comparator.get_comparison_result())
 
     # Using dir1 or dst (which were used when createing comparator has the same effect)
-    entries = comparator.get_entries(["dst", "mutual"], [FileType.FILE])
+    entries = comparator.get_entries(entry_types=[FileType.FILE, FileType.DIR], target_statuses=[FileStatus.UNIQUE, FileStatus.MISMATCHED])
     entries1 = comparator.get_entries(["dst", "mutual"], [FileType.FILE], [FileStatus.UNIQUE, FileStatus.CHANGED])
     entries2 = comparator.get_entries(["dir1", "mutual"], [FileType.FILE], [FileStatus.UNIQUE, FileStatus.CHANGED])
     assert entries1 == entries2

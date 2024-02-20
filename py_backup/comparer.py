@@ -215,19 +215,26 @@ class DirComparator:
         self,
         base_dirs: Iterable[str] | None = None,
         entry_types: Iterable[FileType] | None = None,
-        entry_statuses: Iterable[FileStatus] | None = None,
+        target_statuses: Iterable[FileStatus] | None = None,
     ) -> list[str]:
         """
         Retrieves a list of entries filtered by specified directories, types, and statuses.
         This method filters entries based on the provided criteria and supports
-        nuanced status matching thanks to FileStatus being a Flag enum. 
-        If the entry's status is contained within any of the entry_statuses provided
-        it will be included in the result.
-    
+        nuanced status matching thanks to FileStatus being a Flag enum.
+
+        Entry will be included in the result list if:
+        - Entry is in any of the provided base_dirs (if provided otherwise any base_dir)
+            AND
+        - Entry is of any of the provided FileType:s (if provided otherwise any FileType)
+            AND
+        # Final criteria is easiest explained in code.
+        - any(target_status in entry_status for target_status in target_statuses) == True
+            If target_statuses is None all statuses is included if first 2 criteria are met.
+
         Args:
             base_dirs (Iterable[str] | None): Optional. Directories to include (dir1, dir2, mutual). None for all.
             entry_types (Iterable[FileType] | None): Optional. Types of entries to include. None for all.
-            entry_statuses (Iterable[FileStatus] | None): Optional. Statuses to include. None for all.
+            target_statuses (Iterable[FileStatus] | None): Optional. Statuses to include. None for all.
 
         Returns:
             list[str]: Paths of entries that match the filters.
@@ -238,11 +245,9 @@ class DirComparator:
         >>> comparator.compare_directories()
         >>> dirs = ["src", "mutual"] # OR (equivalent) dirs = ["dir1", "mutual"]
         >>> types = [FileType.FILE]
-        >>> unique_type_status = FileStatus.UNIQUE | FileStatus.MISMATCHED
-        >>> statuses = [unique_type_status, FileStatus.CHANGED]
+        >>> statuses = [FileStatus.UNIQUE, FileStatus.CHANGED]
         >>> comparator.get_entries(dirs, types, statuses)
-        ['path/to/dir1/mismatched_entry', 'path/to/dir2/mismatched_entry',
-        'path/to/dir1/changed_mutual_file.txt', 'path/to/dir2/changed_mutual_file.txt',
+        ['path/to/dir1/changed_mutual_file.txt', 'path/to/dir2/changed_mutual_file.txt',
         'path/to/dir1/unique_dir1_file.txt']
 
         Note: Mutual files gets included on both sides if 'mutual' is included in base_dirs.
@@ -251,17 +256,10 @@ class DirComparator:
             subst_map = {"dir1": self._dir1_name, "dir2": self._dir2_name}
             base_dirs = {subst_map.get(base_dir, base_dir) for base_dir in base_dirs}
         else:
-            base_dirs = {self._dir1_name, self._dir2_name, self._mutual_key}
-        
-        if entry_statuses:
-            statuses = set(entry_statuses)
-        else:
-            any_status = FileStatus(0)
-            for file_status in FileStatus:
-                any_status |= file_status
-            statuses = {any_status}
+            base_dirs = None
 
-        types = set(entry_types) if entry_types else set(FileType)
+        types = set(entry_types) if entry_types else None
+        statuses = set(target_statuses) if target_statuses else None
         entries = []
         base_to_root_path_map = {
             self._dir1_name: (self._dir1,),
@@ -270,15 +268,18 @@ class DirComparator:
         }
 
         for dct_name, main_dct in self._dir_comparison.items():
-            if dct_name not in base_dirs:
+            if base_dirs and dct_name not in base_dirs:
                 continue
 
             for file_type, type_dct in main_dct.items():
-                if file_type not in types:
+                if types and file_type not in types:
                     continue
 
-                for status, entry_set in type_dct.items():
-                    if not self._status_in_target_statuses(status, statuses):
+                for entry_status, entry_set in type_dct.items():
+                    if statuses and not any(
+                        target_status in entry_status
+                        for target_status in target_statuses
+                    ):
                         continue
 
                     root_paths = base_to_root_path_map[dct_name]
@@ -287,12 +288,6 @@ class DirComparator:
                         entries.extend(paths)
 
         return entries
-    
-    def _status_in_target_statuses(self, status: FileStatus, target_statuses: Iterable[FileStatus]) -> bool:
-        for target_status in target_statuses:
-            if status in target_status:
-                return True
-        return False
 
     def compare_directories(
         self,
@@ -381,7 +376,7 @@ class DirComparator:
     def _expand_dir(self, base_dir: str, base_dir_name: str, dir_rel_path: str) -> None:
         """
         This private method is utilized by `expand_dirs` to traverse unique
-        directories identified in the initial comparison results. 
+        directories identified in the initial comparison results.
         Recursively scans a specified directory, adding all nested files and subdirectories
         to the self._dir_comparison dict with their statuses set to UNIQUE.
 
@@ -429,14 +424,14 @@ class DirComparator:
     def _recursive_scandir_cmpr(self, rel_path: str) -> None:
         """
         Called by the compare_directories method. Recursively calls os.scandir for
-        common dirs in self._dir1 and self._dir2. The actual dir comparison and 
+        common dirs in self._dir1 and self._dir2. The actual dir comparison and
         the modification of the internal result dict, self._dir_comparison, is
-        delegated to the _compare_dir_entries method. Nested common dirs 
-        where further recursive calls of this method are necessary are identified in 
+        delegated to the _compare_dir_entries method. Nested common dirs
+        where further recursive calls of this method are necessary are identified in
         the _compare_dir_entries method and returned to this method.
 
         Args:
-            rel_path (str): 
+            rel_path (str):
                 The relative path from the base directories (self._dir1 and self._dir2).
                 In the first call of this method this value will be "" but the
                 value will be updated for each recursive call.
@@ -515,7 +510,7 @@ class DirComparator:
             Delegates determination of file status to _get_file_status.
         - Updates/modifies the internal comparison results dict, self._dir_comparison.
             The actual in place modification is delegated to _add_dct_entry method.
-        - Returns new mutual directory pairs found up to _recursive_scandir_cmpr 
+        - Returns new mutual directory pairs found up to _recursive_scandir_cmpr
             which will in turn call this method again until all
             mutual directory pairs are exhausted.
 
@@ -527,7 +522,7 @@ class DirComparator:
 
         Returns:
             list[str]: A list of relative paths to common directories inside
-                the 2 directories being compared. 
+                the 2 directories being compared.
         """
         # Set initial vars
         common_dirs = []
@@ -544,7 +539,7 @@ class DirComparator:
             # Get rel path of DirEntry:s
             entry_path = os.path.join(rel_path, dir1_entry.name)
 
-            # Below if block evaluates and handles logic for different 
+            # Below if block evaluates and handles logic for different
             # type alignments between dir1_entry and dir2_entry
             if dir1_entry_type == dir2_entry_type:
                 if dir1_entry_type == FileType.DIR:
@@ -553,9 +548,8 @@ class DirComparator:
 
                 fstatus = self._get_file_status(dir1_entry, dir2_entry, dir1_entry_type)
                 if (
-                    (FileStatus.EQUAL in fstatus or FileStatus.NOT_COMPARED in fstatus)
-                    and self._exclude_equal_entries
-                ):
+                    FileStatus.EQUAL in fstatus or FileStatus.NOT_COMPARED in fstatus
+                ) and self._exclude_equal_entries:
                     continue
                 key = self._mutual_key
             elif dir2_entry is None:
@@ -640,7 +634,7 @@ class DirComparator:
 
         Returns:
             FileType: The type of the directory entry, as defined in the FileType enum.
-        
+
         Note:
             - This method only follow symlinks if self._follow_symlinks == True.
                 Otherwise returns FileType.SYMLINK.
@@ -719,7 +713,7 @@ class DirComparator:
 
         Note:
             - If an OSError occurs during the comparison (e.g., due to an inability to access
-              file metadata), FileStatus.CHANGED is returned by default. This is 
+              file metadata), FileStatus.CHANGED is returned by default. This is
               a security feature since this program is mainly intended to be used
               by backup/syncing software.
         """
