@@ -4,7 +4,8 @@ subdirectories that are equal, unique, mismatched in type, or have content chang
 
 It defines:
 - `FileType` Enum: Represents different types of file system objects.
-- `FileStatus` Enum: Describes the comparison result between corresponding entries in the two directories.
+- `FileStatus` Flag: Describes the comparison result between corresponding entries in the two directories.
+                     Since this is a subclass of Flag it behaves like a bitmask.
 - `InfiniteDirTraversalLoopError` Exception: Custom exception for infinite traversal loops.
 - `DirComparator` Class: Main class for comparing directories.
 
@@ -121,8 +122,12 @@ class DirComparator:
         Initializes the DirComparator with two directories to compare.
 
         Args:
-            dir1 (str | Path): The first directory to compare.
-            dir2 (str | Path): The second directory to compare.
+            dir1 (str | Path): The first directory to compare. Path should
+                not contain symlinks since path is later normalised and this can
+                lead to the meaning of the path changing.
+            dir2 (str | Path): The second directory to compare. Path should
+                not contain symlinks since path is later normalised and this can
+                lead to the meaning of the path changing.
             dir1_name (str): Optional. A name to represent the first directory in comparison results.
             dir2_name (str): Optional. A name to represent the second directory in comparison results.
 
@@ -131,8 +136,6 @@ class DirComparator:
                 if the same directory is provided for both,
                 or if the names are identical.
         """
-        # TODO add docstring that explains the dir1 and dir2 paths should not
-        # contain symlinks since normpath can then inadvertedly change them
         self._dir1 = os.path.normpath(str(dir1))
         self._dir2 = os.path.normpath(str(dir2))
 
