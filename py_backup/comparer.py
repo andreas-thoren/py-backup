@@ -256,9 +256,10 @@ class DirComparator:
         if entry_statuses:
             statuses = set(entry_statuses)
         else:
-            statuses = FileStatus(0)
+            any_status = FileStatus(0)
             for file_status in FileStatus:
-                statuses |= file_status
+                any_status |= file_status
+            statuses = {any_status}
 
         types = set(entry_types) if entry_types else set(FileType)
         entries = []
