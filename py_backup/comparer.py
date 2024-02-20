@@ -219,7 +219,11 @@ class DirComparator:
     ) -> list[str]:
         """
         Retrieves a list of entries filtered by specified directories, types, and statuses.
-
+        This method filters entries based on the provided criteria and supports
+        nuanced status matching thanks to FileStatus being a Flag enum. 
+        If the entry's status is contained within any of the entry_statuses provided
+        it will be included in the result.
+    
         Args:
             base_dirs (Iterable[str] | None): Optional. Directories to include (dir1, dir2, mutual). None for all.
             entry_types (Iterable[FileType] | None): Optional. Types of entries to include. None for all.
@@ -234,21 +238,29 @@ class DirComparator:
         >>> comparator.compare_directories()
         >>> dirs = ["src", "mutual"] # OR (equivalent) dirs = ["dir1", "mutual"]
         >>> types = [FileType.FILE]
-        >>> statuses = [FileStatus.UNIQUE, FileStatus.CHANGED]
+        >>> unique_type_status = FileStatus.UNIQUE | FileStatus.MISMATCHED
+        >>> statuses = [unique_type_status, FileStatus.CHANGED]
         >>> comparator.get_entries(dirs, types, statuses)
-        ['path/to/dir1/changed_mutual_file.txt', 'path/to/dir2/changed_mutual_file.txt',
-        'path/to/dir1/unique_dir1_file.txt', ...]
+        ['path/to/dir1/mismatched_entry', 'path/to/dir2/mismatched_entry',
+        'path/to/dir1/changed_mutual_file.txt', 'path/to/dir2/changed_mutual_file.txt',
+        'path/to/dir1/unique_dir1_file.txt']
 
-        Note: Mutual files gets included on both sides, se example above
+        Note: Mutual files gets included on both sides if 'mutual' is included in base_dirs.
         """
         if base_dirs:
             subst_map = {"dir1": self._dir1_name, "dir2": self._dir2_name}
             base_dirs = {subst_map.get(base_dir, base_dir) for base_dir in base_dirs}
         else:
             base_dirs = {self._dir1_name, self._dir2_name, self._mutual_key}
+        
+        if entry_statuses:
+            statuses = set(entry_statuses)
+        else:
+            statuses = FileStatus(0)
+            for file_status in FileStatus:
+                statuses |= file_status
 
         types = set(entry_types) if entry_types else set(FileType)
-        statuses = set(entry_statuses) if entry_statuses else set(FileStatus)
         entries = []
         base_to_root_path_map = {
             self._dir1_name: (self._dir1,),
@@ -265,7 +277,7 @@ class DirComparator:
                     continue
 
                 for status, entry_set in type_dct.items():
-                    if status not in statuses:
+                    if not self._status_in_target_statuses(status, statuses):
                         continue
 
                     root_paths = base_to_root_path_map[dct_name]
@@ -274,6 +286,12 @@ class DirComparator:
                         entries.extend(paths)
 
         return entries
+    
+    def _status_in_target_statuses(self, status: FileStatus, target_statuses: Iterable[FileStatus]) -> bool:
+        for target_status in target_statuses:
+            if status in target_status:
+                return True
+        return False
 
     def compare_directories(
         self,
