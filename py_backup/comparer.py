@@ -424,29 +424,34 @@ class DirComparator:
         dir1_iterator: Iterator,
         dir2_iterator: Iterator,
     ) -> list[str]:
+        # Set initial vars
         common_dirs = []
         dir2_entries_dict = {entry.name: entry for entry in dir2_iterator}
 
+        # Iterate over and compare each dir1_entry
+        # with the corresponding dir2_entry (if any)
         for dir1_entry in dir1_iterator:
+            # Get corresponding dir2_entry
             dir2_entry = dir2_entries_dict.pop(dir1_entry.name, None)
+            # Get FileType:s of DirEntry:s
             dir1_entry_type = self._get_file_type(dir1_entry)
             dir2_entry_type = self._get_file_type(dir2_entry)
+            # Get rel path of DirEntry:s
             entry_path = os.path.join(rel_path, dir1_entry.name)
 
-            # If dir2_entry_type is None below if statement evaluates to False
+            # Below if block evaluates and handles logic for different 
+            # type alignments between dir1_entry and dir2_entry
             if dir1_entry_type == dir2_entry_type:
                 if dir1_entry_type == FileType.DIR:
                     # Both entries are dirs
                     common_dirs.append(entry_path)
 
-                # Both entries have same type which are not dirs
                 status = self._get_file_status(dir1_entry, dir2_entry, dir1_entry_type)
                 if (
                     status in {FileStatus.EQUAL, FileStatus.NOT_COMPARED}
                     and self._exclude_equal_entries
                 ):
                     continue
-
                 key = self._mutual_key
             elif dir2_entry is None:
                 # Unique dir1_entry
@@ -456,15 +461,18 @@ class DirComparator:
                 # Not same type and dir2_entry is not None -> type mismatch
                 status = FileStatus.MISMATCHED
                 key = self._dir1_name
+                # Add mismatched entry to dir2 side as well (if not unilateral compare)
                 if not self._unilateral_compare:
                     self._add_dct_entry(
                         entry_path, self._dir2_name, dir2_entry_type, status
                     )
 
+            # Add dir1_entry to result dict (self._dir_comparison)
             self._add_dct_entry(entry_path, key, dir1_entry_type, status)
 
+        # Add remaining (not popped) unique entries from dir2 to the result dict,
+        # if not unilateral compare
         if not self._unilateral_compare:
-            # Add remaining (not popped) unique entries in dir2
             for unique_entry in dir2_entries_dict.values():
                 entry_path = os.path.join(rel_path, unique_entry.name)
                 file_type = self._get_file_type(unique_entry)
