@@ -35,6 +35,7 @@ class FileType(Enum):
 
 class FileStatus(Enum):
     EQUAL = auto()
+    NOT_COMPARED = auto()
     UNIQUE = auto()
     MISMATCHED = auto()
     CHANGED = auto()
@@ -196,7 +197,10 @@ class DirComparator:
         for dct_name, main_dct in self._dir_comparison.items():
             for file_type, type_dct in main_dct.items():
                 for status, entry_set in type_dct.items():
-                    headline = f"{dct_name.upper()} {status.name} {file_type.name}s:\n"
+                    headline = (
+                        f"{dct_name.upper()} {status.name.replace('_', ' ')} "
+                        + f"{file_type.name}s:\n"
+                    )
                     result += headline
                     for entry in entry_set:
                         result += f"{entry}\n"
@@ -224,13 +228,14 @@ class DirComparator:
         >>> from py_backup.comparer import DirComparator, FileType, FileStatus
         >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2", "src", "dst")
         >>> comparator.compare_directories()
-        >>> dirs = ["src", "mutual"] # Could have used "dir1" instead of "src". Both works.
+        >>> dirs = ["src", "mutual"] # OR (equivalent) dirs = ["dir1", "mutual"]
         >>> types = [FileType.FILE]
         >>> statuses = [FileStatus.UNIQUE, FileStatus.CHANGED]
         >>> comparator.get_entries(dirs, types, statuses)
-        ['path/to/dir1/unique_dir1_file.txt', 'path/to/dir1/changed_mutual_file.txt',
-        'path/to/dir2/changed_mutual_file.txt', ...]
-        # Note that mutual files gets included on both sides (ie twice)
+        ['path/to/dir1/changed_mutual_file.txt', 'path/to/dir2/changed_mutual_file.txt',
+        'path/to/dir1/unique_dir1_file.txt', ...]
+
+        Note: Mutual files gets included on both sides, se example above
         """
         if base_dirs:
             subst_map = {"dir1": self._dir1_name, "dir2": self._dir2_name}
@@ -306,6 +311,33 @@ class DirComparator:
             self.expand_dirs()
 
     def expand_dirs(self) -> None:
+        """
+        Expands all unique directories found in the comparison results
+        to include all nested items.
+
+        This method iterates over unique directories in the comparison result.
+        It recursively scans these directories, adding all nested files and
+        subdirectories to the comparison results with their respective statuses
+        set to UNIQUE. This provides a complete inventory of all items
+        that do not have a counterpart in the other directory.
+
+        Note:
+            - This method should be called after `compare_directories` to ensure that there are
+              comparison results to expand.
+            - The method modifies the internal comparison results dictionary to include entries
+              for all nested items within unique directories.
+            - If `compare_directories` is called with `expand_dirs=True`,
+              this method is implicitly called, and there's no need to call it separately.
+
+        Example:
+            >>> from py_backup.comparer import DirComparator
+            >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2")
+            >>> comparator.compare_directories()
+            # Initially, only top-level unique dirs are included.
+            >>> comparator.expand_dirs()
+            # Now, the comparison results also include detailed entries
+            # for all items within unique directories.
+        """
         # 1. Fetch unique dirs on both sides
         dir1_dir_dct = self._dir_comparison.get(self._dir1_name, {}).get(
             FileType.DIR, {}
@@ -406,11 +438,13 @@ class DirComparator:
                 if dir1_entry_type == FileType.DIR:
                     # Both entries are dirs
                     common_dirs.append(entry_path)
-                    continue
 
                 # Both entries have same type which are not dirs
                 status = self._get_file_status(dir1_entry, dir2_entry, dir1_entry_type)
-                if status == FileStatus.EQUAL and self._exclude_equal_entries:
+                if (
+                    status in {FileStatus.EQUAL, FileStatus.NOT_COMPARED}
+                    and self._exclude_equal_entries
+                ):
                     continue
 
                 key = self._mutual_key
@@ -486,8 +520,8 @@ class DirComparator:
     ) -> FileStatus:
         if file_type == FileType.FILE:
             return self._get_regular_file_status(dir1_entry, dir2_entry)
-        # Right now only files are compared all other types will compare as equal.
-        return FileStatus.EQUAL
+        # Right now only files are compared
+        return FileStatus.NOT_COMPARED
 
     @staticmethod
     def _get_regular_file_status(
