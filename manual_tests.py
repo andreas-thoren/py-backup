@@ -74,6 +74,7 @@ def test_config():
 def test_dir_comparator():
     comparator = DirComparator(DESTINATION_PATH, SOURCE_PATH, dir1_name="dst", dir2_name="src")
     comparator.compare_directories(follow_symlinks=False)
+    print(comparator.dir_comparison)
     print("\nBefore expand_dirs:".upper())
     print(comparator.get_comparison_result())
     comparator.expand_dirs()

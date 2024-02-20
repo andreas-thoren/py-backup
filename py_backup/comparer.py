@@ -13,7 +13,7 @@ Example usage is provided in the `DirComparator` class docstring.
 import os
 import stat
 from copy import deepcopy
-from enum import Enum, auto
+from enum import Enum, Flag, auto
 from pathlib import Path
 from typing import Iterator, Iterable
 
@@ -33,15 +33,16 @@ class FileType(Enum):
     UNKNOWN = auto()
 
 
-class FileStatus(Enum):
-    EQUAL = auto()
+class FileStatus(Flag):
     NOT_COMPARED = auto()
-    UNIQUE = auto()
+    EQUAL = auto()
     MISMATCHED = auto()
+    UNIQUE = auto()
     CHANGED = auto()
     # Currently only EQUAL, UNIQUE, MISMATCHED and CHANGED is used in the application
     NEWER = auto()
     OLDER = auto()
+    # If necessary add flags for permission owner, group or permission changes
 
 
 class InfiniteDirTraversalLoopError(Exception):
