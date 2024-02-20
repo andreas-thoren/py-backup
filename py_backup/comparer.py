@@ -5,7 +5,7 @@ subdirectories that are equal, unique, mismatched in type, or have content chang
 It defines:
 - `FileType` Enum: Represents different types of file system objects.
 - `FileStatus` Flag: Describes the comparison result between corresponding entries in the two directories.
-                     Since this is a subclass of Flag it behaves like a bitmask.
+    Since this is a subclass of Flag it support bitwise operations.
 - `InfiniteDirTraversalLoopError` Exception: Custom exception for infinite traversal loops.
 - `DirComparator` Class: Main class for comparing directories.
 
