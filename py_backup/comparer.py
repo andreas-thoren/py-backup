@@ -357,6 +357,26 @@ class DirComparator:
             self._expand_dir(self._dir2, self._dir2_name, dir2_dir)
 
     def _expand_dir(self, base_dir: str, base_dir_name: str, dir_rel_path: str) -> None:
+        """
+        This private method is utilized by `expand_dirs` to traverse unique
+        directories identified in the initial comparison results. 
+        Recursively scans a specified directory, adding all nested files and subdirectories
+        to the self._dir_comparison dict with their statuses set to UNIQUE.
+
+        Args:
+            base_dir (str): The base directory path from which the relative path starts.
+            base_dir_name (str): The name used to represent the base directory in the
+                                 self._dir_comparison dict.
+            dir_rel_path (str): The relative path from the base directory to the directory
+                                being expanded.
+
+        Note:
+            - This method directly modifies the internal comparison results structure,
+              self._dir_comparison, adding entries under the provided `base_dir_name`.
+            - It's designed to handle unique directories after an initial comparison,
+              thus it does not perform any comparison itself but rather records all
+              encountered items as UNIQUE within the context of their base directory.
+        """
         dir_path = os.path.join(base_dir, dir_rel_path)
         dirs = []
 
@@ -385,8 +405,25 @@ class DirComparator:
             self._expand_dir(base_dir, base_dir_name, nested_dir_path)
 
     def _recursive_scandir_cmpr(self, rel_path: str) -> None:
-        """Recursive function called exclusively by dir_compare.
-        Works by recursing down (depth first) dirs by repeatedly calling os.scandir.
+        """
+        Called by the compare_directories method. Recursively calls os.scandir for
+        common dirs in self._dir1 and self._dir2. The actual dir comparison and 
+        the modification of the internal result dict, self._dir_comparison, is
+        delegated to the _compare_dir_entries method. Nested common dirs 
+        where further recursive calls of this method are necessary are identified in 
+        the _compare_dir_entries method and returned to this method.
+
+        Args:
+            rel_path (str): 
+                The relative path from the base directories (self._dir1 and self._dir2).
+                In the first call of this method this value will be "" but the
+                value will be updated for each recursive call.
+
+        Note:
+            - Permission errors or inaccessible directories/files are skipped with a warning,
+              and the method continues with the next items.
+            - Infinite recursion due to symbolic links or circular references is prevented
+              by maintaining a visited directory set (see _check_visited method).
         """
         dir1_path = os.path.join(self._dir1, rel_path)
         dir2_path = os.path.join(self._dir2, rel_path)
@@ -413,6 +450,27 @@ class DirComparator:
             self._recursive_scandir_cmpr(common_dir)
 
     def _check_visited(self, dir_path: str) -> None:
+        """
+        Checks if a directory has already been visited to prevent infinite recursion
+        during directory traversal. This method updates the `self._visited` set with
+        the directory's unique identifier. On POSIX systems, this identifier is a combination
+        of device and inode numbers. On Windows, it uses the file index number,
+        as inode numbers are not available. If the directory has already been visited,
+        it raises an InfiniteDirTraversalLoopError to halt the recursion.
+
+        Args:
+            dir_path (str): The path to the directory being checked.
+
+        Raises:
+            InfiniteDirTraversalLoopError: If the directory at `dir_path` has already
+                                           been visited, indicating a potential infinite
+                                           recursion in directory traversal.
+
+        Note:
+            The method utilizes os.stat() to retrieve the filesystem's unique identifiers.
+            The specific attributes returned by os.stat(path).st_ino is different between
+            linux and windows (platform specific).
+        """
         stats = os.stat(dir_path)
         dirkey = (stats.st_dev, stats.st_ino)
         if dirkey in self._visited:
@@ -425,6 +483,30 @@ class DirComparator:
         dir1_iterator: Iterator,
         dir2_iterator: Iterator,
     ) -> list[str]:
+        """
+        Called repeatedly by _recursive_scandir_cmpr, once for each directory pair
+        that exists mutually in self._dir1 and self._dir2.
+
+        Each call to this method:
+        - Compares the files and subdirectories of a that directory pair.
+            Delegates determination of file type to _get_file_type.
+            Delegates determination of file status to _get_file_status.
+        - Updates/modifies the internal comparison results dict, self._dir_comparison.
+            The actual in place modification is delegated to _add_dct_entry method.
+        - Returns new mutual directory pairs found up to _recursive_scandir_cmpr 
+            which will in turn call this method again until all
+            mutual directory pairs are exhausted.
+
+        Args:
+            rel_path (str): The relative path from the base directories being compared. This is used to
+                            keep track of the current position in the directory tree.
+            dir1_iterator (Iterator[os.DirEntry]): An iterator over the DirEntry:s in self._dir1.
+            dir2_iterator (Iterator[os.DirEntry]): An iterator over the DirEntry:s in self._dir2.
+
+        Returns:
+            list[str]: A list of relative paths to common directories inside
+                the 2 directories being compared. 
+        """
         # Set initial vars
         common_dirs = []
         dir2_entries_dict = {entry.name: entry for entry in dir2_iterator}
@@ -447,29 +529,29 @@ class DirComparator:
                     # Both entries are dirs
                     common_dirs.append(entry_path)
 
-                status = self._get_file_status(dir1_entry, dir2_entry, dir1_entry_type)
+                fstatus = self._get_file_status(dir1_entry, dir2_entry, dir1_entry_type)
                 if (
-                    status in {FileStatus.EQUAL, FileStatus.NOT_COMPARED}
+                    (FileStatus.EQUAL in fstatus or FileStatus.NOT_COMPARED in fstatus)
                     and self._exclude_equal_entries
                 ):
                     continue
                 key = self._mutual_key
             elif dir2_entry is None:
                 # Unique dir1_entry
-                status = FileStatus.UNIQUE
+                fstatus = FileStatus.UNIQUE
                 key = self._dir1_name
             else:
                 # Not same type and dir2_entry is not None -> type mismatch
-                status = FileStatus.MISMATCHED
+                fstatus = FileStatus.MISMATCHED
                 key = self._dir1_name
                 # Add mismatched entry to dir2 side as well (if not unilateral compare)
                 if not self._unilateral_compare:
                     self._add_dct_entry(
-                        entry_path, self._dir2_name, dir2_entry_type, status
+                        entry_path, self._dir2_name, dir2_entry_type, fstatus
                     )
 
             # Add dir1_entry to result dict (self._dir_comparison)
-            self._add_dct_entry(entry_path, key, dir1_entry_type, status)
+            self._add_dct_entry(entry_path, key, dir1_entry_type, fstatus)
 
         # Add remaining (not popped) unique entries from dir2 to the result dict,
         # if not unilateral compare
@@ -490,11 +572,59 @@ class DirComparator:
         file_type: FileType,
         file_status: FileStatus,
     ) -> None:
+        """
+        This method adds an entry to the internal comparison results dict,
+        self._dir_comparison. The position in the dict is determined by
+        by the directory name, file type, and comparison status according to
+        the following dict structure:
+
+        {
+            'dir1': {
+                'file_typ1': {
+                    # Note that a set is used as the innermost path container.
+                    'file_status1': {rel_path1, rel_path2, etc},
+                    'file_status2': {rel_path3, rel_path4, etc},
+                },
+                'file_typ2': {...}
+            },
+            'dir2': {...},
+            'mutual': {...}
+        }
+
+        The keys for dir1 and dir2 defaults to 'dir1' and 'dir2' if not explicitly
+        set by user on DirCompare instance creation (through __init__ method).
+        Key order above is not guaranteed, can vary.
+
+        Args:
+            entry_path (str): The relative path of the entry.
+            dct_name (str): The dictionary key representing the dir name (see above).
+            file_type (FileType): The type of the file (e.g., FileType.FILE, FileType.DIR).
+            file_status (FileStatus): The comparison status
+                of the entry (e.g., FileStatus.UNIQUE, FileStatus.CHANGED).
+        """
         main_dct = self._dir_comparison.setdefault(dct_name, {})
         type_dct = main_dct.setdefault(file_type, {})
         type_dct.setdefault(file_status, set()).add(entry_path)
 
     def _get_file_type(self, dir_entry: os.DirEntry | None) -> FileType | None:
+        """
+        This method examines a directory entry (such as a file, directory, or symlink)
+        and returns its type as a member of the FileType enum. It leverages os.DirEntry's
+        properties and in the case of special files additional system calls
+        to accurately identify the file type.
+
+        Args:
+            dir_entry (os.DirEntry): The directory entry to examine.
+
+        Returns:
+            FileType: The type of the directory entry, as defined in the FileType enum.
+        
+        Note:
+            - This method only follow symlinks if self._follow_symlinks == True.
+                Otherwise returns FileType.SYMLINK.
+            - If an OSError is encountered when performing a stat call it is caught,
+                a warning is printed to the cli and FileType.UNKNOWN is returned.
+        """
         if dir_entry is None:
             return None
 
@@ -527,6 +657,19 @@ class DirComparator:
     def _get_file_status(
         self, dir1_entry: os.DirEntry, dir2_entry: os.DirEntry, file_type: FileType
     ) -> FileStatus:
+        """
+        Determines the comparison status of two directory entries based on their type.
+        This method delegates the comparison to a type-specific method based on the file_type.
+        Currently, it only compares regular files and returns FileStatus.NOT_COMPARED for other types.
+
+        Args:
+            dir1_entry (os.DirEntry): The directory entry from the first directory.
+            dir2_entry (os.DirEntry): The directory entry from the second directory.
+            file_type (FileType): The type of the files to be compared.
+
+        Returns:
+            FileStatus: The comparison result.
+        """
         if file_type == FileType.FILE:
             return self._get_regular_file_status(dir1_entry, dir2_entry)
         # Right now only files are compared
@@ -536,6 +679,28 @@ class DirComparator:
     def _get_regular_file_status(
         dir1_entry: os.DirEntry, dir2_entry: os.DirEntry, tolerance: float = 2
     ) -> FileStatus:
+        """
+        Compares two regular files to determine if they are equal or have changed.
+        The comparison is based on the modification times and sizes of the files.
+        Files are considered equal if their sizes are identical
+        and their modification times differ by no more than the specified tolerance.
+
+        Args:
+            dir1_entry (os.DirEntry): The directory entry representing the first file.
+            dir2_entry (os.DirEntry): The directory entry representing the second file.
+            tolerance (float): The maximum allowed difference in modification times (in seconds)
+                               for the files to be considered equal.
+
+        Returns:
+            FileStatus: FileStatus.EQUAL if the files are deemed equal or
+                        FileStatus.CHANGED otherwise.
+
+        Note:
+            - If an OSError occurs during the comparison (e.g., due to an inability to access
+              file metadata), FileStatus.CHANGED is returned by default. This is 
+              a security feature since this program is mainly intended to be used
+              by backup/syncing software.
+        """
         try:
             dir1_stats = dir1_entry.stat()
             dir2_stats = dir2_entry.stat()
