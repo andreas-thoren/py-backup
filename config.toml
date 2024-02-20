@@ -1,15 +1,25 @@
 [defaults]
+# Do not add flags for deletions or dry runs since these are added automatically
+# when the corresponding args (utils.py/syncers.py) are set to True.
 rsync = ["-a", "-i", "-v", "-h"]
 robocopy = ["/E", "/DCOPY:DAT", "/COPY:DAT", "/R:3", "/W:1", "/NDL"]
 
 [backup]
+# Do not add flags for deletions or dry runs since these are added automatically
+# when the corresponding args (utils.py/syncers.py) are set to True.
 rsync = ["-a", "-i", "-v", "-h"]
 robocopy = ["/E", "/DCOPY:DAT", "/COPY:DAT", "/R:3", "/W:1", "/NDL"]
 
 [mirror]
+# Do not add flags for deletions or dry runs since these are added automatically
+# when the corresponding args (utils.py/syncers.py) are set to True.
 rsync = ["-a", "-i", "-v", "-h"]
 robocopy = ["/E", "/DCOPY:DAT", "/COPY:DAT", "/R:3", "/W:1", "/NDL"]
 
 [incremental]
+# Do not add flags for deletions or dry runs since these are added automatically
+# when the corresponding args (utils.py/syncers.py) are set to True.
 rsync = ["-a", "-i", "-v", "-h"]
+# Do not add flags to robocopy regarding symlink/junction behaviour for incremental.
+# Might break the incremental backup function. This applies only to robocopy.
 robocopy = ["/E", "/DCOPY:DAT", "/COPY:DAT", "/R:3", "/W:1", "/NDL"]
