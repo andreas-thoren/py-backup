@@ -4,8 +4,8 @@ subdirectories that are equal, unique, mismatched in type, or have content chang
 
 It defines:
 - `FileType` Enum: Represents different types of file system objects.
-- `FileStatus` Flag: Describes the comparison result between corresponding entries in the two directories.
-    Since this is a subclass of Flag it support bitwise operations.
+- `FileStatus` Flag: Describes the comparison result between corresponding entries
+    in the two directories. Since this is a subclass of Flag it support bitwise operations.
 - `InfiniteDirTraversalLoopError` Exception: Custom exception for infinite traversal loops.
 - `DirComparator` Class: Main class for comparing directories.
 
@@ -128,8 +128,10 @@ class DirComparator:
             dir2 (str | Path): The second directory to compare. Path should
                 not contain symlinks since path is later normalised and this can
                 lead to the meaning of the path changing.
-            dir1_name (str): Optional. A name to represent the first directory in comparison results.
-            dir2_name (str): Optional. A name to represent the second directory in comparison results.
+            dir1_name (str): Optional. A name to represent the first directory
+                in comparison results.
+            dir2_name (str): Optional. A name to represent the second directory
+                in comparison results.
 
         Raises:
             ValueError: If either directory does not exist,
@@ -232,9 +234,12 @@ class DirComparator:
             If target_statuses is None all statuses is included if first 2 criteria are met.
 
         Args:
-            base_dirs (Iterable[str] | None): Optional. Directories to include (dir1, dir2, mutual). None for all.
-            entry_types (Iterable[FileType] | None): Optional. Types of entries to include. None for all.
-            target_statuses (Iterable[FileStatus] | None): Optional. Statuses to include. None for all.
+            base_dirs (Iterable[str] | None): Optional. Directories to include (dir1, dir2, mutual).
+                None for all.
+            entry_types (Iterable[FileType] | None): Optional. Types of entries to include.
+                None for all.
+            target_statuses (Iterable[FileStatus] | None): Optional. Statuses to include.
+                None for all.
 
         Returns:
             list[str]: Paths of entries that match the filters.
@@ -256,10 +261,10 @@ class DirComparator:
             subst_map = {"dir1": self._dir1_name, "dir2": self._dir2_name}
             base_dirs = {subst_map.get(base_dir, base_dir) for base_dir in base_dirs}
         else:
-            base_dirs = None
+            base_dirs = set()
 
-        types = set(entry_types) if entry_types else None
-        statuses = set(target_statuses) if target_statuses else None
+        ftypes = set(entry_types) if entry_types else set()
+        statuses = set(target_statuses) if target_statuses else set()
         entries = []
         base_to_root_path_map = {
             self._dir1_name: (self._dir1,),
@@ -272,7 +277,7 @@ class DirComparator:
                 continue
 
             for file_type, type_dct in main_dct.items():
-                if types and file_type not in types:
+                if ftypes and file_type not in ftypes:
                     continue
 
                 for entry_status, entry_set in type_dct.items():
@@ -307,7 +312,8 @@ class DirComparator:
         Args:
             unilateral_compare (bool): Optional. If True, compares in one direction only.
             follow_symlinks (bool): Optional. If True, follows symbolic links.
-            exclude_equal_entries (bool): Optional. If True, equal entries are not listed in the comparison result.
+            exclude_equal_entries (bool): Optional. If True, equal entries
+                are not listed in the comparison result.
             expand_dirs (bool): Optional. If True, include items nested in unique dirs
 
         Example:
@@ -515,8 +521,8 @@ class DirComparator:
             mutual directory pairs are exhausted.
 
         Args:
-            rel_path (str): The relative path from the base directories being compared. This is used to
-                            keep track of the current position in the directory tree.
+            rel_path (str): The relative path from the base directories being compared.
+                This is used to keep track of the current position in the directory tree.
             dir1_iterator (Iterator[os.DirEntry]): An iterator over the DirEntry:s in self._dir1.
             dir2_iterator (Iterator[os.DirEntry]): An iterator over the DirEntry:s in self._dir2.
 
@@ -676,7 +682,8 @@ class DirComparator:
         """
         Determines the comparison status of two directory entries based on their type.
         This method delegates the comparison to a type-specific method based on the file_type.
-        Currently, it only compares regular files and returns FileStatus.NOT_COMPARED for other types.
+        Currently, it only compares regular files and returns FileStatus.NOT_COMPARED
+        for other types.
 
         Args:
             dir1_entry (os.DirEntry): The directory entry from the first directory.
