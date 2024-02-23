@@ -1,8 +1,15 @@
-
+import platform
 from pathlib import Path
 from py_backup.comparer import FileStatus, FileType
 
-TEST_DATA_DIR = Path(__file__).parent / "test_dirs"
+user_platform = platform.system().lower()
+if user_platform == "linux":
+    TEST_DATA_DIR = Path(__file__).parent / "linux_dirs"
+elif user_platform == "windows":
+    TEST_DATA_DIR = Path(__file__).parent / "windows_dirs"
+else:
+    raise NotImplementedError("Platforms other then windows/linux not implemented")
+
 assert TEST_DATA_DIR.is_dir()
 
 DESTINATION = TEST_DATA_DIR / "destination"
