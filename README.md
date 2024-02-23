@@ -19,7 +19,7 @@ Please note that this project is currently in early alpha stage. It is under act
 Clone the repository and install the package using pip. There are no external dependencies, making it straightforward to set up and use.
 
 ### Configuration
-Adjust `config.json` to fine-tune synchronization settings for your needs, with detailed options for both `rsync` and `robocopy`.
+Adjust `config.toml` to fine-tune synchronization settings for your needs, with detailed options for both `rsync` and `robocopy`.
 
 ## Usage
 - For simple tasks, use the functional interface provided by `utils.py`, accessible directly through the package's `__init__.py`.
@@ -48,7 +48,7 @@ completed_process = syncer.sync(
 To extend the program by adding another concrete class implementation of `SyncABC`:
 1. Define your class in `syncers.py`, ensuring it inherits from `SyncABC`.
 2. Implement the required methods, providing functionality specific to the new synchronization method or platform.
-3. Add any necessary configuration options to `config.json`.
+3. Add any necessary configuration options to `config.toml`.
 
 ## Contributing
 Contributions are welcome. Please follow standard coding practices and submit pull requests for any enhancements.
