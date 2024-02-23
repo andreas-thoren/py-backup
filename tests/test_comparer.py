@@ -1,12 +1,52 @@
 import itertools
 import unittest
+from copy import deepcopy
 from py_backup.comparer import (
     DirComparator,
     FileStatus,
-    FileType,
     InfiniteDirTraversalLoopError,
 )
-from .global_test_vars import TEST_DATA_DIR, SOURCE, DESTINATION, NON_EXISTING_DIR
+from .global_test_vars import SOURCE, DESTINATION, NON_EXISTING_DIR, RESULT_DST_SRC
+
+
+def dicts_are_equal(dict1: dict, dict2: dict) -> bool:
+    for key, val1 in dict1.items():
+        val2 = dict2.pop(key, None)
+
+        if val2 is None:
+            print(f"Nested dict {val1} has no corresponding dict in dict2")
+            return False
+
+        if isinstance(val1, dict) and isinstance(val2, dict):
+            nested_dict_is_equal = dicts_are_equal(val1, val2)
+            if not nested_dict_is_equal:
+                return False
+        elif isinstance(val1, set) and isinstance(val2, set):
+            sets_equal = sets_are_equal(val1, val2)
+            if not sets_equal:
+                return False
+        else:
+            raise ValueError("dict_is_equal can only evaluate dict/set values!")
+
+    if dict2:
+        print(
+            f"The following keys exist in dict2 that does not in dict1:\n{list(dict2.keys())}"
+        )
+        return False
+    return True
+
+
+def sets_are_equal(set1: set, set2: set) -> bool:
+    set_diff1 = set1 - set2
+    set_diff2 = set2 - set1
+
+    if set_diff1:
+        print(f"The following items do not exist in set2:\n{set_diff1}")
+
+    if set_diff2:
+        print(f"The following items do not exist in set1:\n{set_diff2}")
+
+    return not (set_diff1 or set_diff2)
 
 
 class TestFileStatus(unittest.TestCase):
@@ -52,3 +92,22 @@ class TestDirComparator(unittest.TestCase):
 
         with self.assertRaises(InfiniteDirTraversalLoopError):
             comparer.compare_directories(follow_symlinks=True)
+
+    def test_compare_directories_bilat(self):
+        comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
+        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=False)
+        result = comparer.dir_comparison
+        # dicts_are_equal modifies dict. Deepcopy first!
+        expected_result = deepcopy(RESULT_DST_SRC)
+        self.assertTrue(dicts_are_equal(result, expected_result))
+
+    def test_compare_directories_unilat(self):
+        comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
+        comparer.compare_directories(
+            expand_dirs=True, exclude_equal_entries=False, unilateral_compare=True
+        )
+        result = comparer.dir_comparison
+        # Deepcopy before modifying
+        expected_result = deepcopy(RESULT_DST_SRC)
+        del expected_result["src"]
+        self.assertTrue(dicts_are_equal(result, expected_result))
