@@ -1,7 +1,7 @@
 # py-backup
 
 ## Overview
-This Python project provides a common interface for file synchronization and backup across different platforms. Designed to be cross-platform by leveraging `rsync` for UNIX/Linux and `robocopy` for Windows. It's developed with Python 3.10+, ensuring compatibility with the latest language features and improvements.
+This Python project provides a common interface for file synchronization and backup across different platforms. Designed to be cross-platform by leveraging `rsync` for UNIX/Linux and `robocopy` for Windows. It's developed with Python 3.11+, ensuring compatibility with the latest language features and improvements.
 
 ## Disclaimer
 Please note that this project is currently in early alpha stage. It is under active development, and while it is functional, bugs and issues are to be expected. I welcome bug reports and contributions to help improve the project. Use it at your own risk.
