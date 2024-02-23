@@ -121,7 +121,12 @@ class TestDirComparator(unittest.TestCase):
         filtered_entries_set = set(comparer.get_entries())
         only_textfiles_set = all_entries_set - filtered_entries_set
         
-        print(only_textfiles_set)
+        # nested_src_dir/nested_src_file.txt is missing
+        print("\n")
+        for text_file in sorted(only_textfiles_set):
+            print(text_file)
+        print()
+
         self.assertEqual(len(only_textfiles_set), 12)
         for path in only_textfiles_set:
             self.assertEqual(pathlib.Path(path).suffix,".txt")
