@@ -1,4 +1,5 @@
 import itertools
+import pathlib
 import unittest
 from copy import deepcopy
 from py_backup.comparer import (
@@ -111,3 +112,16 @@ class TestDirComparator(unittest.TestCase):
         expected_result = deepcopy(RESULT_DST_SRC)
         del expected_result["src"]
         self.assertTrue(dicts_are_equal(result, expected_result))
+    
+    def test_compare_with_simple_excludes(self):
+        comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
+        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=False)
+        all_entries_set = set(comparer.get_entries())
+        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=False, exclude_patterns=["*.txt"])
+        filtered_entries_set = set(comparer.get_entries())
+        only_textfiles_set = all_entries_set - filtered_entries_set
+        
+        print(only_textfiles_set)
+        self.assertEqual(len(only_textfiles_set), 12)
+        for path in only_textfiles_set:
+            self.assertEqual(pathlib.Path(path).suffix,".txt")

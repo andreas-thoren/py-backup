@@ -11,7 +11,9 @@ It defines:
 
 Example usage is provided in the `DirComparator` class docstring.
 """
+import fnmatch
 import os
+import re
 import stat
 from copy import deepcopy
 from enum import Enum, Flag, auto
@@ -158,6 +160,7 @@ class DirComparator:
         self._exclude_equal_entries = True
         self._visited = None  # Will be a set
         self._dir_comparison = {}
+        self._exclude_objects = []
 
     @property
     def dir1(self) -> str:
@@ -300,6 +303,7 @@ class DirComparator:
         follow_symlinks: bool = False,
         exclude_equal_entries: bool = True,
         expand_dirs: bool = False,
+        exclude_patterns: Iterable[str] | None = None
     ) -> None:
         """
         Key method of the DirComparator class. Almost all use cases will call this
@@ -329,6 +333,8 @@ class DirComparator:
         self._exclude_equal_entries = exclude_equal_entries
         self._dir_comparison.clear()
         self._visited = set()
+        excludes = set(exclude_patterns) if exclude_patterns else set()
+        self._exclude_objects = [re.compile(fnmatch.translate(exclude)) for exclude in excludes]
         self._recursive_scandir_cmpr("")
 
         if expand_dirs:
@@ -539,11 +545,17 @@ class DirComparator:
         for dir1_entry in dir1_iterator:
             # Get corresponding dir2_entry
             dir2_entry = dir2_entries_dict.pop(dir1_entry.name, None)
+
+            # Get rel path of DirEntry:s
+            entry_path = os.path.join(rel_path, dir1_entry.name)
+
+            # Check if entry_path is excluded by self._exclude_objects
+            if any(re_obj.match(entry_path) for re_obj in self._exclude_objects):
+                continue
+
             # Get FileType:s of DirEntry:s
             dir1_entry_type = self._get_file_type(dir1_entry)
             dir2_entry_type = self._get_file_type(dir2_entry)
-            # Get rel path of DirEntry:s
-            entry_path = os.path.join(rel_path, dir1_entry.name)
 
             # Below if block evaluates and handles logic for different
             # type alignments between dir1_entry and dir2_entry
@@ -579,13 +591,21 @@ class DirComparator:
         # if not unilateral compare
         if not self._unilateral_compare:
             for unique_entry in dir2_entries_dict.values():
+
+                # Check if entry_path is excluded by self._exclude_objects
                 entry_path = os.path.join(rel_path, unique_entry.name)
+                if any(re_obj.match(entry_path) for re_obj in self._exclude_objects):
+                    continue
+
                 file_type = self._get_file_type(unique_entry)
                 self._add_dct_entry(
                     entry_path, self._dir2_name, file_type, FileStatus.UNIQUE
                 )
 
         return common_dirs
+
+    def _exclude_path(self, rel_path: str) -> bool:
+        return any(re_obj.match(rel_path) for re_obj in self._exclude_objects)
 
     def _add_dct_entry(
         self,
