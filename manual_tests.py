@@ -4,12 +4,7 @@ from py_backup import folder_backup
 from py_backup.syncers import Robocopy, Rsync
 from py_backup.comparer import DirComparator, FileType, FileStatus
 from tests.test_comparer import TestDirComparator
-
-SOURCE_PATH = "tests/test_dirs/source"
-DESTINATION_PATH = "tests/test_dirs/destination"
-
-assert os.path.exists(SOURCE_PATH)
-assert os.path.exists(DESTINATION_PATH)
+from tests.global_test_vars import SOURCE, DESTINATION
 
 
 def test_folder_backup():
@@ -64,7 +59,7 @@ def test_config():
 
 def test_dir_comparator():
     comparator = DirComparator(
-        DESTINATION_PATH, SOURCE_PATH, dir1_name="dst", dir2_name="src"
+        DESTINATION, SOURCE, dir1_name="dst", dir2_name="src"
     )
     comparator.compare_directories(follow_symlinks=False)
     print(comparator.dir_comparison)
@@ -95,9 +90,13 @@ def test_dir_comparator():
 def test_dir_comparison2():
     TestDirComparator().test_compare_directories()
 
+def test_dir_comparison_excludes():
+    TestDirComparator().test_compare_with_simple_excludes()
+
 
 if __name__ == "__main__":
-    test_dir_comparison2()
+    test_dir_comparison_excludes()
+    # test_dir_comparison2()
     # test_dir_comparator()
     # test_Robocopy()
     # test_Rsync()
