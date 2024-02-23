@@ -1,7 +1,6 @@
-import platform
 from pathlib import Path
 
-TEST_DATA_DIR = Path(__file__).parent / (platform.system().lower() + "_dirs")
+TEST_DATA_DIR = Path(__file__).parent / "test_dirs"
 assert TEST_DATA_DIR.is_dir()
 
 DESTINATION = TEST_DATA_DIR / "destination"
