@@ -66,7 +66,6 @@ RESULT_DST_SRC = {
         FileType.SYMLINK: {
             FileStatus.NOT_COMPARED: {
                 str(Path("common_dir/loop_link")),
-                str(Path("common_dir/loop_link_windows")),
             }
         },
     },
