@@ -165,7 +165,7 @@ class DirComparator:
         # Initiate variables used in compare_directories method
         self._unilateral_compare = False
         self._follow_symlinks = False
-        self._exclude_equal_entries = True
+        self._include_equal_entries = False
         self._visited = None  # Will be a set
         self._dir_comparison = {}
 
@@ -321,7 +321,7 @@ class DirComparator:
         self,
         unilateral_compare: bool = False,
         follow_symlinks: bool = False,
-        exclude_equal_entries: bool = True,
+        include_equal_entries: bool = False,
         expand_dirs: bool = False,
     ) -> None:
         """
@@ -349,7 +349,7 @@ class DirComparator:
         """
         self._unilateral_compare = unilateral_compare
         self._follow_symlinks = follow_symlinks
-        self._exclude_equal_entries = exclude_equal_entries
+        self._include_equal_entries = include_equal_entries
         self._dir_comparison.clear()
         self._visited = set()
         self._recursive_scandir_cmpr("")
@@ -591,7 +591,7 @@ class DirComparator:
                 fstatus = self._get_file_status(dir1_entry, dir2_entry, dir1_entry_type)
                 if (
                     FileStatus.EQUAL in fstatus or FileStatus.NOT_COMPARED in fstatus
-                ) and self._exclude_equal_entries:
+                ) and not self._include_equal_entries:
                     continue
                 key = self._mutual_key
             elif dir2_entry is None:
@@ -626,9 +626,6 @@ class DirComparator:
                 )
 
         return common_dirs
-
-    def _exclude_path(self, rel_path: str) -> bool:
-        return any(re_obj.match(rel_path) for re_obj in self._exclude_objects)
 
     def _add_dct_entry(
         self,

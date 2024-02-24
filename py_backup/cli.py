@@ -47,10 +47,15 @@ def incremental(args: argparse.Namespace):
 
 
 def compare(args: argparse.Namespace):
-    comparer = DirComparator(args.dir1, args.dir2, args.dir1_name, args.dir2_name)
-    exclude_equals = not args.include_equals
+    excludes = args.exclude if args.exclude else None
+    comparer = DirComparator(
+        args.dir1, args.dir2, args.dir1_name, args.dir2_name, excludes
+    )
     comparer.compare_directories(
-        args.unilateral_compare, args.follow_symlinks, exclude_equals, args.expand_dirs
+        args.unilateral_compare,
+        args.follow_symlinks,
+        args.include_equals,
+        args.expand_dirs,
     )
     print(comparer.get_comparison_result())
 
@@ -168,7 +173,6 @@ def main():
         help=("Include equal files in the comparison result"),
     )
     compare_parser.add_argument(
-        "-e",
         "--expand-dirs",
         action="store_true",
         help=(
@@ -184,6 +188,12 @@ def main():
         "--dir2-name",
         default="dir2",
         help="What dir2 will be called in the result. If not used dir2_name defaults to 'dir2'",
+    )
+    compare_parser.add_argument(
+        "--exclude",
+        nargs="*",
+        help="List of exclude patterns (Unix style). Files or directories matching these patterns will be excluded from comparison.",
+        default=[],
     )
     compare_parser.set_defaults(func=compare)
 

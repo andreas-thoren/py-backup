@@ -97,7 +97,7 @@ class TestDirComparator(unittest.TestCase):
 
     def test_compare_directories_bilat(self):
         comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
-        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=False)
+        comparer.compare_directories(expand_dirs=True, include_equal_entries=True)
         result = comparer.dir_comparison
         # dicts_are_equal modifies dict. Deepcopy first!
         expected_result = deepcopy(RESULT_DST_SRC)
@@ -106,7 +106,7 @@ class TestDirComparator(unittest.TestCase):
     def test_compare_directories_unilat(self):
         comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
         comparer.compare_directories(
-            expand_dirs=True, exclude_equal_entries=False, unilateral_compare=True
+            expand_dirs=True, include_equal_entries=True, unilateral_compare=True
         )
         result = comparer.dir_comparison
         # Deepcopy before modifying
@@ -116,14 +116,14 @@ class TestDirComparator(unittest.TestCase):
 
     def test_compare_with_simple_excludes(self):
         comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
-        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=False)
+        comparer.compare_directories(expand_dirs=True, include_equal_entries=True)
         all_entries_set = set(comparer.get_entries())
 
         excl = ["*.txt"]
         comparer = DirComparator(
             DESTINATION, SOURCE, dir1_name="dst", dir2_name="src", exclude_patterns=excl
         )
-        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=False)
+        comparer.compare_directories(expand_dirs=True, include_equal_entries=True)
         filtered_entries_set = set(comparer.get_entries())
         only_textfiles_set = all_entries_set - filtered_entries_set
 
@@ -134,13 +134,13 @@ class TestDirComparator(unittest.TestCase):
     def test_compare_with_leaf_excludes(self):
         # Get all entries without excludes
         comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
-        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=True)
+        comparer.compare_directories(expand_dirs=True, include_equal_entries=False)
         all_entries_set = set(comparer.get_entries())
 
         # Test destination leaf exclude
         excl = ["common_dir/common_inner_dir/inner_dst_file.txt"]
         comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src", exclude_patterns=excl)
-        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=True)
+        comparer.compare_directories(expand_dirs=True, include_equal_entries=False)
         excl_entries_set = set(comparer.get_entries())
         missing = os.path.join(DESTINATION, "common_dir/common_inner_dir/inner_dst_file.txt")
         set_diff_expected = {missing}
@@ -150,7 +150,7 @@ class TestDirComparator(unittest.TestCase):
         # Test source leaf exclude
         excl = ["common_dir/common_inner_dir/inner_src_file.txt"]
         comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src", exclude_patterns=excl)
-        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=True)
+        comparer.compare_directories(expand_dirs=True, include_equal_entries=False)
         excl_entries_set = set(comparer.get_entries())
         missing = os.path.join(SOURCE, "common_dir/common_inner_dir/inner_src_file.txt")
         set_diff_expected = {missing}
