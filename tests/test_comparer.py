@@ -117,16 +117,11 @@ class TestDirComparator(unittest.TestCase):
         comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
         comparer.compare_directories(expand_dirs=True, exclude_equal_entries=False)
         all_entries_set = set(comparer.get_entries())
-        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=False, exclude_patterns=["*.txt"])
+        comparer.exclude_patterns = ["*.txt"]
+        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=False)
         filtered_entries_set = set(comparer.get_entries())
         only_textfiles_set = all_entries_set - filtered_entries_set
         
-        # nested_src_dir/nested_src_file.txt is missing
-        print("\n")
-        for text_file in sorted(only_textfiles_set):
-            print(text_file)
-        print()
-
         self.assertEqual(len(only_textfiles_set), 12)
         for path in only_textfiles_set:
             self.assertEqual(pathlib.Path(path).suffix,".txt")

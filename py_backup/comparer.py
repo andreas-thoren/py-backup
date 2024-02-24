@@ -119,6 +119,7 @@ class DirComparator:
         dir2: str | Path,
         dir1_name: str = "dir1",
         dir2_name: str = "dir2",
+        exclude_patterns: Iterable[str] | None = None,
     ) -> None:
         """
         Initializes the DirComparator with two directories to compare.
@@ -160,7 +161,7 @@ class DirComparator:
         self._exclude_equal_entries = True
         self._visited = None  # Will be a set
         self._dir_comparison = {}
-        self._exclude_objects = []
+        self.exclude_patterns = exclude_patterns
 
     @property
     def dir1(self) -> str:
@@ -181,6 +182,17 @@ class DirComparator:
     @property
     def dir_comparison(self) -> dict:
         return deepcopy(self._dir_comparison)
+
+    @property
+    def exclude_patterns(self) -> set[str]:
+        return self._exclude_patterns
+
+    @exclude_patterns.setter
+    def exclude_patterns(self, value: Iterable[str] | None):
+        self._exclude_patterns = set(value) if value else set()
+        self._exclude_objects = [
+            re.compile(fnmatch.translate(exclude)) for exclude in self.exclude_patterns
+        ]
 
     def get_comparison_result(self) -> str:
         """
@@ -303,7 +315,6 @@ class DirComparator:
         follow_symlinks: bool = False,
         exclude_equal_entries: bool = True,
         expand_dirs: bool = False,
-        exclude_patterns: Iterable[str] | None = None
     ) -> None:
         """
         Key method of the DirComparator class. Almost all use cases will call this
@@ -333,8 +344,6 @@ class DirComparator:
         self._exclude_equal_entries = exclude_equal_entries
         self._dir_comparison.clear()
         self._visited = set()
-        excludes = set(exclude_patterns) if exclude_patterns else set()
-        self._exclude_objects = [re.compile(fnmatch.translate(exclude)) for exclude in excludes]
         self._recursive_scandir_cmpr("")
 
         if expand_dirs:
@@ -413,8 +422,15 @@ class DirComparator:
             self._check_visited(dir_path)
             with os.scandir(dir_path) as dir_iterator:
                 for dir_entry in dir_iterator:
-                    file_type = self._get_file_type(dir_entry)
                     entry_path = os.path.join(dir_rel_path, dir_entry.name)
+
+                    # Check if entry_path is excluded by self._exclude_objects
+                    if any(
+                        re_obj.match(entry_path) for re_obj in self._exclude_objects
+                    ):
+                        continue
+
+                    file_type = self._get_file_type(dir_entry)
                     self._add_dct_entry(
                         entry_path, base_dir_name, file_type, FileStatus.UNIQUE
                     )
@@ -591,7 +607,6 @@ class DirComparator:
         # if not unilateral compare
         if not self._unilateral_compare:
             for unique_entry in dir2_entries_dict.values():
-
                 # Check if entry_path is excluded by self._exclude_objects
                 entry_path = os.path.join(rel_path, unique_entry.name)
                 if any(re_obj.match(entry_path) for re_obj in self._exclude_objects):
