@@ -1,4 +1,5 @@
 import itertools
+import os
 import pathlib
 import unittest
 from copy import deepcopy
@@ -129,3 +130,30 @@ class TestDirComparator(unittest.TestCase):
         self.assertEqual(len(only_textfiles_set), 12)
         for path in only_textfiles_set:
             self.assertEqual(pathlib.Path(path).suffix, ".txt")
+
+    def test_compare_with_leaf_excludes(self):
+        # Get all entries without excludes
+        comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
+        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=True)
+        all_entries_set = set(comparer.get_entries())
+
+        # Test destination leaf exclude
+        excl = ["common_dir/common_inner_dir/inner_dst_file.txt"]
+        comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src", exclude_patterns=excl)
+        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=True)
+        excl_entries_set = set(comparer.get_entries())
+        missing = os.path.join(DESTINATION, "common_dir/common_inner_dir/inner_dst_file.txt")
+        set_diff_expected = {missing}
+        set_diff_actual = all_entries_set - excl_entries_set
+        self.assertEqual(set_diff_actual, set_diff_expected)
+
+        # Test source leaf exclude
+        excl = ["common_dir/common_inner_dir/inner_src_file.txt"]
+        comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src", exclude_patterns=excl)
+        comparer.compare_directories(expand_dirs=True, exclude_equal_entries=True)
+        excl_entries_set = set(comparer.get_entries())
+        missing = os.path.join(SOURCE, "common_dir/common_inner_dir/inner_src_file.txt")
+        set_diff_expected = {missing}
+        set_diff_actual = all_entries_set - excl_entries_set
+        self.assertEqual(set_diff_actual, set_diff_expected)
+        

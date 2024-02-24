@@ -95,7 +95,8 @@ def test_dir_comparison_excludes():
 
 
 if __name__ == "__main__":
-    test_dir_comparison_excludes()
+    TestDirComparator().test_compare_with_leaf_excludes()
+    # test_dir_comparison_excludes()
     # test_dir_comparison2()
     # test_dir_comparator()
     # test_Robocopy()
