@@ -154,14 +154,20 @@ class DirComparator:
         if dir1_name == dir2_name:
             raise ValueError("You cannot give the 2 directories the same name!")
 
+        # Initial instance variables
         self._dir1_name = dir1_name
         self._dir2_name = dir2_name
+        self._exclude_patterns = set(exclude_patterns) if exclude_patterns else set()
+        self._exclude_objects = [
+            re.compile(fnmatch.translate(exclude)) for exclude in self.exclude_patterns
+        ]
+
+        # Initiate variables used in compare_directories method
         self._unilateral_compare = False
         self._follow_symlinks = False
         self._exclude_equal_entries = True
         self._visited = None  # Will be a set
         self._dir_comparison = {}
-        self.exclude_patterns = exclude_patterns
 
     @property
     def dir1(self) -> str:
@@ -188,11 +194,13 @@ class DirComparator:
         return self._exclude_patterns
 
     @exclude_patterns.setter
-    def exclude_patterns(self, value: Iterable[str] | None):
-        self._exclude_patterns = set(value) if value else set()
-        self._exclude_objects = [
-            re.compile(fnmatch.translate(exclude)) for exclude in self.exclude_patterns
-        ]
+    def exclude_patterns(self, _) -> None:
+        msg = (
+            "exclude_patterns can only be set when object is created.\n"
+            + "Create a new instance of DirComparer if you need to change "
+            + "exclude patterns!"
+        )
+        raise AttributeError(msg)
 
     def get_comparison_result(self) -> str:
         """
