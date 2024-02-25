@@ -48,15 +48,17 @@ def incremental(args: argparse.Namespace):
 
 def compare(args: argparse.Namespace):
     excludes = args.exclude if args.exclude else None
-    comparer = DirComparator(
-        args.dir1, args.dir2, args.dir1_name, args.dir2_name, excludes
-    )
+    comparer = DirComparator(args.dir1, args.dir2, args.dir1_name, args.dir2_name)
     comparer.compare_directories(
-        args.unilateral_compare,
-        args.follow_symlinks,
-        args.include_equals,
-        args.expand_dirs,
+        unilateral_compare=args.unilateral_compare,
+        follow_symlinks=args.follow_symlinks,
+        include_equal_entries=args.include_equals,
+        excludes=excludes,
     )
+
+    if args.expand_dirs:
+        comparer.expand_dirs(excludes)
+
     print(comparer.get_comparison_result())
 
 

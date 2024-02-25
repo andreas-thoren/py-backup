@@ -119,7 +119,6 @@ class DirComparator:
         dir2: str | Path,
         dir1_name: str = "dir1",
         dir2_name: str = "dir2",
-        exclude_patterns: Iterable[str] | None = None,
     ) -> None:
         """
         Initializes the DirComparator with two directories to compare.
@@ -157,10 +156,6 @@ class DirComparator:
         # Initial instance variables
         self._dir1_name = dir1_name
         self._dir2_name = dir2_name
-        self._exclude_patterns = set(exclude_patterns) if exclude_patterns else set()
-        self._exclude_objects = [
-            re.compile(fnmatch.translate(exclude)) for exclude in self.exclude_patterns
-        ]
 
         # Initiate variables used in compare_directories method
         self._unilateral_compare = False
@@ -188,19 +183,6 @@ class DirComparator:
     @property
     def dir_comparison(self) -> dict:
         return deepcopy(self._dir_comparison)
-
-    @property
-    def exclude_patterns(self) -> set[str]:
-        return self._exclude_patterns
-
-    @exclude_patterns.setter
-    def exclude_patterns(self, _) -> None:
-        msg = (
-            "exclude_patterns can only be set when object is created.\n"
-            + "Create a new instance of DirComparer if you need to change "
-            + "exclude patterns!"
-        )
-        raise AttributeError(msg)
 
     def get_comparison_result(self) -> str:
         """
@@ -322,7 +304,7 @@ class DirComparator:
         unilateral_compare: bool = False,
         follow_symlinks: bool = False,
         include_equal_entries: bool = False,
-        expand_dirs: bool = False,
+        excludes: Iterable[str] | None = None,
     ) -> None:
         """
         Key method of the DirComparator class. Almost all use cases will call this
@@ -352,12 +334,15 @@ class DirComparator:
         self._include_equal_entries = include_equal_entries
         self._dir_comparison.clear()
         self._visited = set()
-        self._recursive_scandir_cmpr("")
 
-        if expand_dirs:
-            self.expand_dirs()
+        # Create regex objects
+        exclude_patterns = set(excludes) if excludes else set()
+        exclude_objects = [
+            re.compile(fnmatch.translate(exclude)) for exclude in exclude_patterns
+        ]
+        self._recursive_scandir_cmpr("", exclude_objects)
 
-    def expand_dirs(self) -> None:
+    def expand_dirs(self, excludes: Iterable[str] | None = None) -> None:
         """
         Expands all unique directories found in the comparison results
         to include all nested items.
@@ -395,14 +380,26 @@ class DirComparator:
         dir1_dirs = [dir for dirs in dir1_dir_dct.values() for dir in dirs]
         dir2_dirs = [dir for dirs in dir2_dir_dct.values() for dir in dirs]
 
+        # Create regex objects
+        exclude_patterns = set(excludes) if excludes else set()
+        exclude_objects = [
+            re.compile(fnmatch.translate(exclude)) for exclude in exclude_patterns
+        ]
+
         # 2. Call _expand dir for all unique/mismatched dirs on both sides
         for dir1_dir in dir1_dirs:
-            self._expand_dir(self._dir1, self._dir1_name, dir1_dir)
+            self._expand_dir(self._dir1, self._dir1_name, dir1_dir, exclude_objects)
 
         for dir2_dir in dir2_dirs:
-            self._expand_dir(self._dir2, self._dir2_name, dir2_dir)
+            self._expand_dir(self._dir2, self._dir2_name, dir2_dir, exclude_objects)
 
-    def _expand_dir(self, base_dir: str, base_dir_name: str, dir_rel_path: str) -> None:
+    def _expand_dir(
+        self,
+        base_dir: str,
+        base_dir_name: str,
+        dir_rel_path: str,
+        exclude_objects: list[re.Pattern],
+    ) -> None:
         """
         This private method is utilized by `expand_dirs` to traverse unique
         directories identified in the initial comparison results.
@@ -433,9 +430,7 @@ class DirComparator:
                     entry_path = os.path.join(dir_rel_path, dir_entry.name)
 
                     # Check if entry_path is excluded by self._exclude_objects
-                    if any(
-                        re_obj.match(entry_path) for re_obj in self._exclude_objects
-                    ):
+                    if any(re_obj.match(entry_path) for re_obj in exclude_objects):
                         continue
 
                     file_type = self._get_file_type(dir_entry)
@@ -455,9 +450,11 @@ class DirComparator:
 
         # Recursive relation
         for nested_dir_path in dirs:
-            self._expand_dir(base_dir, base_dir_name, nested_dir_path)
+            self._expand_dir(base_dir, base_dir_name, nested_dir_path, exclude_objects)
 
-    def _recursive_scandir_cmpr(self, rel_path: str) -> None:
+    def _recursive_scandir_cmpr(
+        self, rel_path: str, exclude_objects: list[re.Pattern]
+    ) -> None:
         """
         Called by the compare_directories method. Recursively calls os.scandir for
         common dirs in self._dir1 and self._dir2. The actual dir comparison and
@@ -487,7 +484,7 @@ class DirComparator:
             with os.scandir(dir1_path) as dir1_iterator:
                 with os.scandir(dir2_path) as dir2_iterator:
                     common_dirs = self._compare_dir_entries(
-                        rel_path, dir1_iterator, dir2_iterator
+                        rel_path, dir1_iterator, dir2_iterator, exclude_objects
                     )
 
         except PermissionError:
@@ -500,7 +497,7 @@ class DirComparator:
 
         # Recursive relation. Doesnt follow symlinks.
         for common_dir in common_dirs:
-            self._recursive_scandir_cmpr(common_dir)
+            self._recursive_scandir_cmpr(common_dir, exclude_objects)
 
     def _check_visited(self, dir_path: str) -> None:
         """
@@ -535,6 +532,7 @@ class DirComparator:
         rel_path: str,
         dir1_iterator: Iterator,
         dir2_iterator: Iterator,
+        exclude_objects: list[re.Pattern],
     ) -> list[str]:
         """
         Called repeatedly by _recursive_scandir_cmpr, once for each directory pair
@@ -574,7 +572,7 @@ class DirComparator:
             entry_path = os.path.join(rel_path, dir1_entry.name)
 
             # Check if entry_path is excluded by self._exclude_objects
-            if any(re_obj.match(entry_path) for re_obj in self._exclude_objects):
+            if any(re_obj.match(entry_path) for re_obj in exclude_objects):
                 continue
 
             # Get FileType:s of DirEntry:s
@@ -617,7 +615,7 @@ class DirComparator:
             for unique_entry in dir2_entries_dict.values():
                 # Check if entry_path is excluded by self._exclude_objects
                 entry_path = os.path.join(rel_path, unique_entry.name)
-                if any(re_obj.match(entry_path) for re_obj in self._exclude_objects):
+                if any(re_obj.match(entry_path) for re_obj in exclude_objects):
                     continue
 
                 file_type = self._get_file_type(unique_entry)
