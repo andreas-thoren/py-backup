@@ -157,9 +157,11 @@ class DirComparator:
         self._dir1_name = dir1_name
         self._dir2_name = dir2_name
 
+        # Follow symlinks always start as false. Can be set using obj.follow_symlinks = True
+        self._follow_symlinks = False
+
         # Initiate variables used in compare_directories method
         self._unilateral_compare = False
-        self._follow_symlinks = False
         self._include_equal_entries = False
         self._visited = None  # Will be a set
         self._dir_comparison = {}
@@ -183,6 +185,17 @@ class DirComparator:
     @property
     def dir_comparison(self) -> dict:
         return deepcopy(self._dir_comparison)
+    
+    @property
+    def follow_symlinks(self) -> bool:
+        return self._follow_symlinks
+    
+    @follow_symlinks.setter
+    def follow_symlinks(self, value: bool) -> None:
+        if not isinstance(value, bool):
+            raise TypeError("follow_symlinks can only be set to a boolean value!")
+        
+        self._follow_symlinks = value
 
     def get_comparison_result(self) -> str:
         """
@@ -302,7 +315,6 @@ class DirComparator:
     def compare_directories(
         self,
         unilateral_compare: bool = False,
-        follow_symlinks: bool = False,
         include_equal_entries: bool = False,
         excludes: Iterable[str] | None = None,
     ) -> None:
@@ -316,7 +328,6 @@ class DirComparator:
 
         Args:
             unilateral_compare (bool): Optional. If True, compares in one direction only.
-            follow_symlinks (bool): Optional. If True, follows symbolic links.
             exclude_equal_entries (bool): Optional. If True, equal entries
                 are not listed in the comparison result.
             expand_dirs (bool): Optional. If True, include items nested in unique dirs
@@ -330,7 +341,6 @@ class DirComparator:
         # in the compared directories will be included in the result.
         """
         self._unilateral_compare = unilateral_compare
-        self._follow_symlinks = follow_symlinks
         self._include_equal_entries = include_equal_entries
         self._dir_comparison.clear()
         self._visited = set()

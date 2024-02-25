@@ -99,7 +99,8 @@ class TestDirComparator(unittest.TestCase):
         comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
 
         with self.assertRaises(InfiniteDirTraversalLoopError):
-            comparer.compare_directories(follow_symlinks=True)
+            comparer.follow_symlinks = True
+            comparer.compare_directories()
 
     def test_compare_directories_bilat(self):
         comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
