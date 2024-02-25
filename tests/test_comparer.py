@@ -140,23 +140,25 @@ class TestDirComparator(unittest.TestCase):
         all_entries_set = set(comparer.get_entries())
 
         # Test destination leaf exclude
-        excl = ["common_dir/common_inner_dir/inner_dst_file.txt"]
+        excl = [os.path.join("common_dir", "common_inner_dir", "inner_dst_file.txt")]
         comparer.compare_directories(include_equal_entries=False, excludes=excl)
         comparer.expand_dirs(excludes=excl)
         excl_entries_set = set(comparer.get_entries())
         missing = os.path.join(
-            DESTINATION, "common_dir/common_inner_dir/inner_dst_file.txt"
+            DESTINATION, "common_dir", "common_inner_dir", "inner_dst_file.txt"
         )
         set_diff_expected = {missing}
         set_diff_actual = all_entries_set - excl_entries_set
         self.assertEqual(set_diff_actual, set_diff_expected)
 
         # Test source leaf exclude
-        excl = ["common_dir/common_inner_dir/inner_src_file.txt"]
+        excl = [os.path.join("common_dir", "common_inner_dir", "inner_src_file.txt")]
         comparer.compare_directories(include_equal_entries=False, excludes=excl)
         comparer.expand_dirs(excludes=excl)
         excl_entries_set = set(comparer.get_entries())
-        missing = os.path.join(SOURCE, "common_dir/common_inner_dir/inner_src_file.txt")
+        missing = os.path.join(
+            SOURCE, "common_dir", "common_inner_dir", "inner_src_file.txt"
+        )
         set_diff_expected = {missing}
         set_diff_actual = all_entries_set - excl_entries_set
         self.assertEqual(set_diff_actual, set_diff_expected)
