@@ -211,6 +211,7 @@ class DirComparator:
         >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2")
         >>> comparator.compare_directories()
         >>> print(comparator.get_comparison_result())
+
         DIR1 UNIQUE FILEs:
         path/to/dir1/unique_file.txt
 
@@ -283,7 +284,7 @@ class DirComparator:
             base_dirs = set()
 
         ftypes = set(entry_types) if entry_types else set()
-        statuses = set(target_statuses) if target_statuses else set()
+        fstatuses = set(target_statuses) if target_statuses else set()
         entries = []
         base_to_root_path_map = {
             self._dir1_name: (self._dir1,),
@@ -300,9 +301,8 @@ class DirComparator:
                     continue
 
                 for entry_status, entry_set in type_dct.items():
-                    if statuses and not any(
-                        target_status in entry_status
-                        for target_status in target_statuses
+                    if fstatuses and not any(
+                        target_status in entry_status for target_status in fstatuses
                     ):
                         continue
 
@@ -322,24 +322,33 @@ class DirComparator:
         """
         Key method of the DirComparator class. Almost all use cases will call this
         method at least once. Performs the directory comparison based on the
-        provided args. After calling this method you can:
+        provided args. After calling this method you can optionally call expand_dirs
+        method to include items nested in exclusive dirs in the outcome.
+        Then continue with one/several of the following actions:
         - get the results dict with the dir_comparison property
         - get filtered result entries with the get_entries method
         - get a formatted result string with the get_comparison_result method.
 
         Args:
             unilateral_compare (bool): Optional. If True, compares in one direction only.
-            exclude_equal_entries (bool): Optional. If True, equal entries
+            include_equal_entries (bool): Optional. If False, equal entries
                 are not listed in the comparison result.
-            expand_dirs (bool): Optional. If True, include items nested in unique dirs
+            excludes (Iterable[str] | None): Optional. List of unix style patterns
+                representing paths to ignore during the comparison. If a
+                pattern matches a dir the dir and all its content will be
+                excluded.
 
         Example:
         >>> from py_backup.comparer import DirComparator
         >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2")
-        >>> comparator.compare_directories(expand_dirs=True, exclude_equal_entries=False)
+        >>> excl = ["*.txt", ".git"]
+        >>> comparator.compare_directories(
+            include_equal_entries=True, excludes= excl
+        )
+        # Initially, only top-level unique dirs are included.
+        # For consistent results use same exludes for the expand_dirs call.
+        >>> comparator.expand_dirs(exludes=excl)
         >>> result = comparator.dir_comparison
-        # Do something with the result. Note that with the options above all items
-        # in the compared directories will be included in the result.
         """
         # Set initial state. These method variables is set as instance attributes
         # to minimize size of stack frames which might be important due to recursion.
@@ -373,22 +382,17 @@ class DirComparator:
         set to UNIQUE. This provides a complete inventory of all items
         that do not have a counterpart in the other directory.
 
+        Args:
+            excludes (Iterable[str] | None): Optional. List of unix style patterns
+                representing paths to ignore during dir expansion.
+
         Note:
             - This method should be called after `compare_directories` to ensure that there are
               comparison results to expand.
             - The method modifies the internal comparison results dictionary to include entries
               for all nested items within unique directories.
-            - If `compare_directories` is called with `expand_dirs=True`,
-              this method is implicitly called, and there's no need to call it separately.
-
-        Example:
-            >>> from py_backup.comparer import DirComparator
-            >>> comparator = DirComparator("/path/to/dir1", "/path/to/dir2")
-            >>> comparator.compare_directories()
-            # Initially, only top-level unique dirs are included.
-            >>> comparator.expand_dirs()
-            # Now, the comparison results also include detailed entries
-            # for all items within unique directories.
+            - For most use cases you will want to use same excludes when
+              calling this method as for the previous compare_directories call.
         """
         # 1. Fetch unique dirs on both sides
         dir1_dir_dct = self._dir_comparison.get(self._dir1_name, {}).get(
