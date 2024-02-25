@@ -19,6 +19,21 @@ assert DESTINATION.is_dir()
 assert SOURCE.is_dir()
 assert not NON_EXISTING_DIR.exists()
 
+COMMON_DIR = {
+    str(Path(DESTINATION / "common_dir/dst_file.txt")),
+    str(Path(DESTINATION / "common_dir/common_inner_dir/inner_dst_file.txt")),
+    str(Path(SOURCE / "common_dir/source_file.txt")),
+    str(Path(SOURCE / "common_dir/common_inner_dir/inner_src_file.txt")),
+    str(Path(SOURCE / "common_dir/common_inner_dir/common_inner_file.txt")),
+    str(Path(DESTINATION / "common_dir/common_inner_dir/common_inner_file.txt")),
+    str(Path(SOURCE / "common_dir")),
+    str(Path(DESTINATION / "common_dir")),
+    str(Path(SOURCE / "common_dir/common_inner_dir")),
+    str(Path(DESTINATION / "common_dir/common_inner_dir")),
+    str(Path(SOURCE / "common_dir/loop_link")),
+    str(Path(DESTINATION / "common_dir/loop_link")),
+}
+
 RESULT_DST_SRC = {
     "dst": {
         FileType.FILE: {
@@ -33,7 +48,10 @@ RESULT_DST_SRC = {
             FileStatus.MISMATCHED: {str(Path("src_dir_dst_file"))},
         },
         FileType.DIR: {
-            FileStatus.UNIQUE: {str(Path("inner_dst_dir")), str(Path("inner_dst_dir/nested_inner_dst_dir"))},
+            FileStatus.UNIQUE: {
+                str(Path("inner_dst_dir")),
+                str(Path("inner_dst_dir/nested_inner_dst_dir")),
+            },
             FileStatus.MISMATCHED: {str(Path("src_file_dst_dir"))},
         },
     },
@@ -61,7 +79,10 @@ RESULT_DST_SRC = {
             },
         },
         FileType.DIR: {
-            FileStatus.NOT_COMPARED: {str(Path("common_dir")), str(Path("common_dir/common_inner_dir"))},
+            FileStatus.NOT_COMPARED: {
+                str(Path("common_dir")),
+                str(Path("common_dir/common_inner_dir")),
+            },
         },
         FileType.SYMLINK: {
             FileStatus.NOT_COMPARED: {

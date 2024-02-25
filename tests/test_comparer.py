@@ -8,7 +8,13 @@ from py_backup.comparer import (
     FileStatus,
     InfiniteDirTraversalLoopError,
 )
-from .global_test_vars import SOURCE, DESTINATION, NON_EXISTING_DIR, RESULT_DST_SRC
+from .global_test_vars import (
+    SOURCE,
+    DESTINATION,
+    NON_EXISTING_DIR,
+    RESULT_DST_SRC,
+    COMMON_DIR,
+)
 
 
 def dicts_are_equal(dict1: dict, dict2: dict) -> bool:
@@ -162,3 +168,18 @@ class TestDirComparator(unittest.TestCase):
         set_diff_expected = {missing}
         set_diff_actual = all_entries_set - excl_entries_set
         self.assertEqual(set_diff_actual, set_diff_expected)
+
+    def test_compare_with_dir_exclude(self):
+        # Get all entries without excludes
+        comparer = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
+        comparer.compare_directories(include_equal_entries=True)
+        comparer.expand_dirs()
+        all_entries_set = set(comparer.get_entries())
+
+        excl = ["common_dir"]
+        comparer.compare_directories(include_equal_entries=True, excludes=excl)
+        comparer.expand_dirs(excludes=excl)
+        excl_entries_set = set(comparer.get_entries())
+
+        set_diff_actual = all_entries_set - excl_entries_set
+        self.assertEqual(set_diff_actual, COMMON_DIR)
