@@ -220,17 +220,15 @@ class DirComparator:
         ...
         """
         result = "\n"
-        for dct_name, main_dct in self._dir_comparison.items():
-            for file_type, type_dct in main_dct.items():
-                for status, entry_set in type_dct.items():
-                    headline = (
-                        f"{dct_name.upper()} {status.name.replace('_', ' ')} "
-                        + f"{file_type.name}s:\n"
-                    )
-                    result += headline
-                    for entry in entry_set:
-                        result += f"{entry}\n"
-                    result += "\n"
+        for dct_name, ftype, fstatus, entries in self._iter_result():
+            headline = (
+                f"{dct_name.upper()} {fstatus.name.replace('_', ' ')} "
+                + f"{ftype.name}s:\n"
+            )
+            result += headline
+            for entry in entries:
+                result += f"{entry}\n"
+            result += "\n"
         return result
 
     def get_entries(
@@ -277,6 +275,37 @@ class DirComparator:
 
         Note: Mutual files gets included on both sides if 'mutual' is included in base_dirs.
         """
+        result = []
+        base_to_root_path_map = {
+            self._dir1_name: (self._dir1,),
+            self._dir2_name: (self._dir2,),
+            self._mutual_key: (self._dir1, self._dir2),
+        }
+
+        for dct_name, _, _, entries in self._iter_result(base_dirs, entry_types, target_statuses):
+            root_paths = base_to_root_path_map[dct_name]
+            for root_path in root_paths:
+                paths = [os.path.join(root_path, entry) for entry in entries]
+                result.extend(paths)
+
+        return result
+
+    def _iter_result(
+        self,
+        base_dirs: Iterable[str] | None = None,
+        entry_types: Iterable[FileType] | None = None,
+        target_statuses: Iterable[FileStatus] | None = None,
+    ) -> Iterator[tuple[str, FileType, FileStatus, set[str]]]:
+        """
+        Filters and retrieves the entries for the get_entries and
+        get_comparison_result methods. Supports nuanced status matching
+        , bitmask style, thanks to FileStatus being a Flag enum. If any of the
+        args are None that means no filtering will take place for that arg, ex
+        target_statuses = None means all FileStatus will be acceptable as long
+        as filters for base_dirs and entry_types match (if any).
+        See get_entries for args description.
+        """
+
         if base_dirs:
             subst_map = {"dir1": self._dir1_name, "dir2": self._dir2_name}
             base_dirs = {subst_map.get(base_dir, base_dir) for base_dir in base_dirs}
@@ -285,19 +314,13 @@ class DirComparator:
 
         ftypes = set(entry_types) if entry_types else set()
         fstatuses = set(target_statuses) if target_statuses else set()
-        entries = []
-        base_to_root_path_map = {
-            self._dir1_name: (self._dir1,),
-            self._dir2_name: (self._dir2,),
-            self._mutual_key: (self._dir1, self._dir2),
-        }
 
         for dct_name, main_dct in self._dir_comparison.items():
             if base_dirs and dct_name not in base_dirs:
                 continue
 
-            for file_type, type_dct in main_dct.items():
-                if ftypes and file_type not in ftypes:
+            for ftype, type_dct in main_dct.items():
+                if ftypes and ftype not in ftypes:
                     continue
 
                 for entry_status, entry_set in type_dct.items():
@@ -305,13 +328,8 @@ class DirComparator:
                         target_status in entry_status for target_status in fstatuses
                     ):
                         continue
-
-                    root_paths = base_to_root_path_map[dct_name]
-                    for root_path in root_paths:
-                        paths = [os.path.join(root_path, entry) for entry in entry_set]
-                        entries.extend(paths)
-
-        return entries
+                    
+                    yield dct_name, ftype, entry_status, entry_set
 
     def compare_directories(
         self,
@@ -457,11 +475,11 @@ class DirComparator:
                     ):
                         continue
 
-                    file_type = self._get_file_type(dir_entry)
+                    ftype = self._get_file_type(dir_entry)
                     self._add_dct_entry(
-                        entry_path, base_dir_name, file_type, FileStatus.UNIQUE
+                        entry_path, base_dir_name, ftype, FileStatus.UNIQUE
                     )
-                    if file_type == FileType.DIR:
+                    if ftype == FileType.DIR:
                         dirs.append(entry_path)
 
         except PermissionError:
@@ -639,9 +657,9 @@ class DirComparator:
                 if any(re_obj.match(entry_path) for re_obj in self._exclude_objects):
                     continue
 
-                file_type = self._get_file_type(unique_entry)
+                ftype = self._get_file_type(unique_entry)
                 self._add_dct_entry(
-                    entry_path, self._dir2_name, file_type, FileStatus.UNIQUE
+                    entry_path, self._dir2_name, ftype, FileStatus.UNIQUE
                 )
 
         return common_dirs
@@ -724,16 +742,16 @@ class DirComparator:
 
             stats = dir_entry.stat(follow_symlinks=self._follow_symlinks)
             mode = stat.S_IFMT(stats.st_mode)
-            file_type = self.mode_to_filetype_map.get(mode, FileType.UNKNOWN)
+            ftype = self.mode_to_filetype_map.get(mode, FileType.UNKNOWN)
         except OSError as exc:
             print(
                 f"Error while trying to decide file type for {dir_entry}:\n"
                 + f"{exc}\n"
                 + "FileType set to UNKNOWN"
             )
-            file_type = FileType.UNKNOWN
+            ftype = FileType.UNKNOWN
 
-        return file_type
+        return ftype
 
     def _get_file_status(
         self, dir1_entry: os.DirEntry, dir2_entry: os.DirEntry, file_type: FileType
