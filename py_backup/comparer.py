@@ -728,13 +728,15 @@ class DirComparator:
             return None
 
         try:
-            # Below requires python 3.12. Skip for now. When added -> add before is_dir call.
-            # if dir_entry.is_junction():
-            # return "junction"
-
             # Exhaust is_* methods first to avoid unneccessary system calls.
             if dir_entry.is_file(follow_symlinks=self._follow_symlinks):
                 return FileType.FILE
+            if not self._follow_symlinks:
+                # Unfortunately follow_symlinks=False doesnt keep python from following junctions.
+                # This therefore has to come before is_dir check.
+                # Can only check for junctions in python 3.12 and above
+                if hasattr(dir_entry, "is_junction") and getattr(dir_entry, "is_junction")():
+                    return FileType.JUNCTION
             if dir_entry.is_dir(follow_symlinks=self._follow_symlinks):
                 return FileType.DIR
             if dir_entry.is_symlink():
