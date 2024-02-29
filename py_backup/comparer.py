@@ -44,7 +44,6 @@ class FileStatus(Flag):
     MISMATCHED = auto()
     UNIQUE = auto()
     CHANGED = auto()
-    # Currently only EQUAL, UNIQUE, MISMATCHED and CHANGED is used in the application
     NEWER = auto()
     OLDER = auto()
     # If necessary add flags for permission owner, group or permission changes
