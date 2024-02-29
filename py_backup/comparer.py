@@ -38,6 +38,8 @@ class FileType(Enum):
 
 class FileStatus(Flag):
     NOT_COMPARED = auto()
+    # UNKNOWN means FileStatus could not be determined (due to OSError)
+    UNKNOWN = auto()
     EQUAL = auto()
     MISMATCHED = auto()
     UNIQUE = auto()
@@ -759,7 +761,7 @@ class DirComparator:
         self, dir1_entry: os.DirEntry, dir2_entry: os.DirEntry, file_type: FileType
     ) -> FileStatus:
         """
-        Determines the comparison status of two directory entries based on their type.
+        Determines the comparison status of two directory entries of equal type.
         This method delegates the comparison to a type-specific method based on the file_type.
         Currently, it only compares regular files and returns FileStatus.NOT_COMPARED
         for other types.
@@ -799,9 +801,7 @@ class DirComparator:
 
         Note:
             - If an OSError occurs during the comparison (e.g., due to an inability to access
-              file metadata), FileStatus.CHANGED is returned by default. This is
-              a security feature since this program is mainly intended to be used
-              by backup/syncing software.
+              file metadata), FileStatus.UNKNOWN is returned.
         """
         try:
             dir1_stats = dir1_entry.stat()
@@ -811,7 +811,10 @@ class DirComparator:
             if time_diff <= tolerance and size_equal:
                 return FileStatus.EQUAL
         except OSError:
-            # Right now OSError will lead to FileStatus.CHANGED being returned
-            # since this means file will be backed up
-            pass
+            print(
+                f"When comparing {dir1_entry.path} with {dir2_entry.path} "
+                + "an OSError occured. Returning 'FileStatus.UNKNOWN'"
+            )
+            return FileStatus.UNKNOWN
+
         return FileStatus.CHANGED
