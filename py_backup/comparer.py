@@ -22,6 +22,7 @@ from typing import Iterator, Iterable
 
 
 class FileType(Enum):
+    NO_FILE = auto()  # Means there is no file of any kind at that location
     FILE = auto()
     DIR = auto()
     SYMLINK = auto()
@@ -708,7 +709,7 @@ class DirComparator:
         type_dct = main_dct.setdefault(file_type, {})
         type_dct.setdefault(file_status, set()).add(entry_path)
 
-    def _get_file_type(self, dir_entry: os.DirEntry | None) -> FileType | None:
+    def _get_file_type(self, dir_entry: os.DirEntry | None) -> FileType:
         """
         This method examines a directory entry (such as a file, directory, or symlink)
         and returns its type as a member of the FileType enum. It leverages os.DirEntry's
@@ -728,7 +729,7 @@ class DirComparator:
                 a warning is printed to the cli and FileType.UNKNOWN is returned.
         """
         if dir_entry is None:
-            return None
+            return FileType.NO_FILE
 
         try:
             # Exhaust is_* methods first to avoid unneccessary system calls.
@@ -800,8 +801,8 @@ class DirComparator:
                                for the files to be considered equal.
 
         Returns:
-            FileStatus: FileStatus.EQUAL if the files are deemed equal 
-                otherwise the FileStatus corresponding to the file changes, 
+            FileStatus: FileStatus.EQUAL if the files are deemed equal
+                otherwise the FileStatus corresponding to the file changes,
                 ex FileStatus.CHANGED | FileStatus.NEWER
 
         Note:
