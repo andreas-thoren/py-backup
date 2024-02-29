@@ -22,7 +22,7 @@ def dicts_are_equal(dict1: dict, dict2: dict) -> bool:
         val2 = dict2.pop(key, None)
 
         if val2 is None:
-            print(f"Nested dict {val1} has no corresponding dict in dict2")
+            print(f"Nested dict {key}: {val1} has no corresponding dict in dict2")
             return False
 
         if isinstance(val1, dict) and isinstance(val2, dict):
@@ -135,7 +135,7 @@ class TestDirComparator(unittest.TestCase):
         filtered_entries_set = set(comparer.get_entries())
         only_textfiles_set = all_entries_set - filtered_entries_set
 
-        self.assertEqual(len(only_textfiles_set), 12)
+        self.assertEqual(len(only_textfiles_set), 14)
         for path in only_textfiles_set:
             self.assertEqual(pathlib.Path(path).suffix, ".txt")
 

@@ -284,7 +284,9 @@ class DirComparator:
             self._mutual_key: (self._dir1, self._dir2),
         }
 
-        for dct_name, _, _, entries in self._iter_result(base_dirs, entry_types, target_statuses):
+        for dct_name, _, _, entries in self._iter_result(
+            base_dirs, entry_types, target_statuses
+        ):
             root_paths = base_to_root_path_map[dct_name]
             for root_path in root_paths:
                 paths = [os.path.join(root_path, entry) for entry in entries]
@@ -330,7 +332,7 @@ class DirComparator:
                         target_status in entry_status for target_status in fstatuses
                     ):
                         continue
-                    
+
                     yield dct_name, ftype, entry_status, entry_set
 
     def compare_directories(
@@ -737,7 +739,10 @@ class DirComparator:
                 # Unfortunately follow_symlinks=False doesnt keep python from following junctions.
                 # This therefore has to come before is_dir check.
                 # Can only check for junctions in python 3.12 and above
-                if hasattr(dir_entry, "is_junction") and getattr(dir_entry, "is_junction")():
+                if (
+                    hasattr(dir_entry, "is_junction")
+                    and getattr(dir_entry, "is_junction")()
+                ):
                     return FileType.JUNCTION
             if dir_entry.is_dir(follow_symlinks=self._follow_symlinks):
                 return FileType.DIR
@@ -803,13 +808,24 @@ class DirComparator:
             - If an OSError occurs during the comparison (e.g., due to an inability to access
               file metadata), FileStatus.UNKNOWN is returned.
         """
+        fstatus = FileStatus.CHANGED
+
         try:
             dir1_stats = dir1_entry.stat()
             dir2_stats = dir2_entry.stat()
             time_diff = abs(dir1_stats.st_mtime - dir2_stats.st_mtime)
             size_equal = dir1_stats.st_size == dir2_stats.st_size
-            if time_diff <= tolerance and size_equal:
-                return FileStatus.EQUAL
+
+            if time_diff <= tolerance:
+                if size_equal:
+                    return FileStatus.EQUAL
+                # If not size_equal fstatus (which is == FileStatus.CHANGED)
+                # will be returned further down
+            elif dir1_stats.st_mtime > dir2_stats.st_mtime:
+                fstatus |= FileStatus.NEWER
+            else:
+                fstatus |= FileStatus.OLDER
+
         except OSError:
             print(
                 f"When comparing {dir1_entry.path} with {dir2_entry.path} "
@@ -817,4 +833,4 @@ class DirComparator:
             )
             return FileStatus.UNKNOWN
 
-        return FileStatus.CHANGED
+        return fstatus

@@ -58,9 +58,7 @@ def test_config():
 
 
 def test_dir_comparator():
-    comparator = DirComparator(
-        DESTINATION, SOURCE, dir1_name="dst", dir2_name="src"
-    )
+    comparator = DirComparator(DESTINATION, SOURCE, dir1_name="dst", dir2_name="src")
     comparator.compare_directories(follow_symlinks=False)
     print(comparator.dir_comparison)
     print("\nBefore expand_dirs:".upper())
@@ -90,12 +88,13 @@ def test_dir_comparator():
 def test_dir_comparison2():
     TestDirComparator().test_compare_directories()
 
+
 def test_dir_comparison_excludes():
     TestDirComparator().test_compare_with_simple_excludes()
 
 
 if __name__ == "__main__":
-    TestDirComparator().test_compare_with_leaf_excludes()
+    TestDirComparator().test_compare_directories_bilat()
     # test_dir_comparison_excludes()
     # test_dir_comparison2()
     # test_dir_comparator()

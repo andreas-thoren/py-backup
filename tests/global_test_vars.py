@@ -72,7 +72,8 @@ RESULT_DST_SRC = {
     },
     "mutual": {
         FileType.FILE: {
-            FileStatus.CHANGED: {str(Path("testfile1.txt"))},
+            FileStatus.CHANGED | FileStatus.NEWER: {str(Path("newer.txt"))},
+            FileStatus.CHANGED | FileStatus.OLDER: {str(Path("older.txt"))},
             FileStatus.EQUAL: {
                 str(Path("equal_file.txt")),
                 str(Path("common_dir/common_inner_dir/common_inner_file.txt")),
