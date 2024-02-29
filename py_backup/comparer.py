@@ -801,8 +801,8 @@ class DirComparator:
 
         Returns:
             FileStatus: FileStatus.EQUAL if the files are deemed equal 
-otherwise the FileStatus corresponding to the file changes, 
-ex FileStatus.CHANGED | FileStatus.NEWER
+                otherwise the FileStatus corresponding to the file changes, 
+                ex FileStatus.CHANGED | FileStatus.NEWER
 
         Note:
             - If an OSError occurs during the comparison (e.g., due to an inability to access
