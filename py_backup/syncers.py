@@ -74,6 +74,7 @@ class SyncABC(ABC):
         path = path.resolve()
 
         if must_exist and (not path.is_dir()):
+            logger.error("Path %s does not point to an existing directory.", path)
             raise ValueError(f"{path} does not point to an existing dir!")
 
         return path
@@ -163,6 +164,11 @@ class SyncABC(ABC):
         # 4. Call subprocess.run with error handling.
         result = self.subprocess_run(subprocess_args, subprocess_kwargs)
         self.handle_returncode(result)
+        logger.debug(
+            "sync method with %s completed\n  Returncode = %i.\n  Subprocess args = %s\n"
+            "  subprocess kwargs = %s",
+            self.__class__.__name__, result.returncode, subprocess_args, subprocess_kwargs
+        )
         return result
 
     @staticmethod
@@ -215,7 +221,9 @@ class SyncABC(ABC):
             result = subprocess.run(args_list, **subprocess_kwargs, check=False)
         except FileNotFoundError as exc:
             cli_program = args_list[0]
-
+            logger.error(
+                "%s not found. Ensure it is installed and in your PATH.", cli_program
+            )
             raise FileNotFoundError(
                 f"{cli_program} does not seem to be installed on your system, "
                 + "or path is not set.\n"
