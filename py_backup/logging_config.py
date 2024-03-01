@@ -21,7 +21,7 @@ class LoggingConfigurator:
 
         stdout_handler = logging.StreamHandler(sys.stdout)
         stdout_handler.setLevel(cls.STDOUT_LOG_LEVEL)
-        stdout_handler.addFilter(InfoFilter())
+        stdout_handler.addFilter(lambda record: record.levelno < cls.STDERR_LOG_LEVEL)
         stdout_handler.setFormatter(
             logging.Formatter(cls.LOG_FORMAT, datefmt=cls.LOG_DATEFORMAT)
         )
@@ -35,11 +35,6 @@ class LoggingConfigurator:
         logger.addHandler(stdout_handler)
         logger.addHandler(stderr_handler)
         cls._initialized = True
-
-
-class InfoFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        return record.levelno < LoggingConfigurator.STDERR_LOG_LEVEL
 
 
 def get_logger(name: str) -> logging.Logger:
