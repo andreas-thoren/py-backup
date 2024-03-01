@@ -167,20 +167,20 @@ class SyncABC(ABC):
         # 5. Handle the error code and write to log at debug or error level
         # depending on wheter subprocess call was succesful or not.
         log_level = "debug"
+
         try:
             self.handle_returncode(result)
         except subprocess.CalledProcessError:
             log_level = "error"
-            raise
-        finally:
-            getattr(logger, log_level)(
-                "%s.sync completed\n  Returncode = %i.\n  Subprocess args = %s\n"
-                "  subprocess kwargs = %s\n",
-                self.__class__.__name__,
-                result.returncode,
-                str(subprocess_args),
-                str(subprocess_kwargs),
-            )
+
+        getattr(logger, log_level)(
+            "%s.sync completed\n  Returncode = %i.\n  Command = %s\n"
+            "  subprocess kwargs = %s\n",
+            self.__class__.__name__,
+            result.returncode,
+            str(subprocess_args),
+            str(subprocess_kwargs),
+        )
 
         return result
 
@@ -207,7 +207,7 @@ class SyncABC(ABC):
         return {key: value for key, value in kwargs.items() if not key in excl}
 
     def subprocess_run(
-        self, args_list: list, subprocess_kwargs: dict | None
+        self, args_list: list, subprocess_kwargs: dict
     ) -> subprocess.CompletedProcess:
         """
         Executes a subprocess with the given arguments and keyword arguments.
@@ -267,18 +267,14 @@ class SyncABC(ABC):
         """
 
     @abstractmethod
-    def get_args(
-        self, options: list | None, delete: bool, dry_run: bool
-    ) -> tuple[str, str, list[str]]:
+    def get_args(self, options: list | None, delete: bool, dry_run: bool) -> list[str]:
         """Used by sync method to get args list for subsequent subproccess call"""
 
 
 class Rsync(SyncABC):
     _default_sync_options = RSYNC_DEFAULTS
 
-    def get_args(
-        self, options: list | None, delete: bool, dry_run: bool
-    ) -> tuple[str, str, list[str]]:
+    def get_args(self, options: list | None, delete: bool, dry_run: bool) -> list[str]:
         """
         Constructs the argument list for an rsync command based on the specified options,
         whether to delete extraneous files from the destination, and whether to perform
@@ -357,9 +353,7 @@ class Rsync(SyncABC):
 class Robocopy(SyncABC):
     _default_sync_options = ROBOCOPY_DEFAULTS
 
-    def get_args(
-        self, options: list | None, delete: bool, dry_run: bool
-    ) -> tuple[str, str, list[str]]:
+    def get_args(self, options: list | None, delete: bool, dry_run: bool) -> list[str]:
         """
         Constructs the argument list for a robocopy command based on the specified options,
         whether to delete extraneous files from the destination, and whether to perform
