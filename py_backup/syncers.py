@@ -163,15 +163,25 @@ class SyncABC(ABC):
 
         # 4. Call subprocess.run with error handling.
         result = self.subprocess_run(subprocess_args, subprocess_kwargs)
-        self.handle_returncode(result)
-        logger.debug(
-            "sync method with %s completed\n  Returncode = %i.\n  Subprocess args = %s\n"
-            "  subprocess kwargs = %s",
-            self.__class__.__name__,
-            result.returncode,
-            subprocess_args,
-            subprocess_kwargs,
-        )
+
+        # 5. Handle the error code and write to log at debug or error level
+        # depending on wheter subprocess call was succesful or not.
+        log_level = "debug"
+        try:
+            self.handle_returncode(result)
+        except subprocess.CalledProcessError:
+            log_level = "error"
+            raise
+        finally:
+            getattr(logger, log_level)(
+                "sync method with %s completed\n  Returncode = %i.\n  Subprocess args = %s\n"
+                "  subprocess kwargs = %s",
+                self.__class__.__name__,
+                result.returncode,
+                str(subprocess_args),
+                str(subprocess_kwargs),
+            )
+
         return result
 
     @staticmethod
@@ -237,12 +247,6 @@ class SyncABC(ABC):
 
     def handle_returncode(self, result: subprocess.CompletedProcess):
         """Should be overwritten by concrete classes when needed!"""
-        logger.error(
-            "%s copy operation encountered an issue!\n" "%s return code: %i",
-            self.__class__.__name__,
-            self.__class__.__name__,
-            result.returncode,
-        )
         result.check_returncode()
 
     @abstractmethod
@@ -423,11 +427,5 @@ class Robocopy(SyncABC):
 
         No error!
         """
-
         if result.returncode > 7:
-            logger.error(
-                "Robocopy copy operation encountered an issue!\n"
-                "Robocopy return code: %i",
-                result.returncode,
-            )
             result.check_returncode()
