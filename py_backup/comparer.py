@@ -19,6 +19,10 @@ from copy import deepcopy
 from enum import Enum, Flag, auto
 from pathlib import Path
 from typing import Iterator, Iterable
+from .logging_config import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class FileType(Enum):
@@ -487,11 +491,11 @@ class DirComparator:
                         dirs.append(entry_path)
 
         except PermissionError:
-            print(f"Could not access {dir_path} . Skipping!")
+            logger.error("Could not access %s. Skipping!", dir_path)
         except OSError as exc:
-            print(
-                f"Unspecfic os error for path {dir_path}\n\nError Info:\n"
-                + f"{exc}\n\nSkipping!"
+            logger.error(
+                "Unspecific os error for path %s\n\nError Info:\n%s\n\nSkipping!",
+                dir_path, exc
             )
 
         # Recursive relation
@@ -532,11 +536,11 @@ class DirComparator:
                     )
 
         except PermissionError:
-            print(f"Could not access {rel_path} . Skipping!")
+            logger.error("Could not access %s. Skipping!", rel_path)
         except OSError as exc:
-            print(
-                f"Unspecfic os error for path {rel_path}\n\nError Info:\n"
-                + f"{exc}\n\nSkipping!"
+            logger.error(
+                "Unspecific os error for path %s\n\nError Info:\n%s\n\nSkipping!",
+                rel_path, exc
             )
 
         # Recursive relation.
@@ -753,10 +757,10 @@ class DirComparator:
             mode = stat.S_IFMT(stats.st_mode)
             ftype = self.mode_to_filetype_map.get(mode, FileType.UNKNOWN)
         except OSError as exc:
-            print(
-                f"Error while trying to decide file type for {dir_entry}:\n"
-                + f"{exc}\n"
-                + "FileType set to UNKNOWN"
+            logger.error(
+                "Error while trying to decide file type for %s:\n%s\n"
+                "FileType set to UNKNOWN",
+                dir_entry, exc
             )
             ftype = FileType.UNKNOWN
 
@@ -828,9 +832,10 @@ class DirComparator:
                 fstatus |= FileStatus.OLDER
 
         except OSError:
-            print(
-                f"When comparing {dir1_entry.path} with {dir2_entry.path} "
-                + "an OSError occured. Returning 'FileStatus.UNKNOWN'"
+            logger.error(
+                "When comparing %s with %s "
+                "an OSError occured. Returning 'FileStatus.UNKNOWN'",
+                dir1_entry.path, dir2_entry.path
             )
             return FileStatus.UNKNOWN
 

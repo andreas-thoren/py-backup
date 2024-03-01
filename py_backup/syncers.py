@@ -2,6 +2,10 @@ import subprocess
 from abc import ABC, abstractmethod
 from pathlib import Path
 from .config import RSYNC_DEFAULTS, ROBOCOPY_DEFAULTS
+from .logging_config import get_logger
+
+
+logger = get_logger(__name__)
 
 
 class SyncABC(ABC):
@@ -404,9 +408,9 @@ class Robocopy(SyncABC):
         """
 
         if result.returncode > 7:
-            msg = (
+            logger.error(
                 "Robocopy copy operation encountered an issue!\n"
-                + f"Robocopy return code: {result.returncode}"
+                "Robocopy return code: %i",
+                result.returncode
             )
-            print(msg)
             result.check_returncode()
