@@ -174,8 +174,8 @@ class SyncABC(ABC):
             raise
         finally:
             getattr(logger, log_level)(
-                "sync method with %s completed\n  Returncode = %i.\n  Subprocess args = %s\n"
-                "  subprocess kwargs = %s",
+                "%s.sync completed\n  Returncode = %i.\n  Subprocess args = %s\n"
+                "  subprocess kwargs = %s\n",
                 self.__class__.__name__,
                 result.returncode,
                 str(subprocess_args),
