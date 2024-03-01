@@ -495,7 +495,8 @@ class DirComparator:
         except OSError as exc:
             logger.error(
                 "Unspecific os error for path %s\n\nError Info:\n%s\n\nSkipping!",
-                dir_path, exc
+                dir_path,
+                exc,
             )
 
         # Recursive relation
@@ -540,7 +541,8 @@ class DirComparator:
         except OSError as exc:
             logger.error(
                 "Unspecific os error for path %s\n\nError Info:\n%s\n\nSkipping!",
-                rel_path, exc
+                rel_path,
+                exc,
             )
 
         # Recursive relation.
@@ -760,7 +762,8 @@ class DirComparator:
             logger.error(
                 "Error while trying to decide file type for %s:\n%s\n"
                 "FileType set to UNKNOWN",
-                dir_entry, exc
+                dir_entry,
+                exc,
             )
             ftype = FileType.UNKNOWN
 
@@ -835,7 +838,8 @@ class DirComparator:
             logger.error(
                 "When comparing %s with %s "
                 "an OSError occured. Returning 'FileStatus.UNKNOWN'",
-                dir1_entry.path, dir2_entry.path
+                dir1_entry.path,
+                dir2_entry.path,
             )
             return FileStatus.UNKNOWN
 
