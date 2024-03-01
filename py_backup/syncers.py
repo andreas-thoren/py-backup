@@ -173,9 +173,10 @@ class SyncABC(ABC):
         except subprocess.CalledProcessError:
             log_level = "error"
 
+        print()
         getattr(logger, log_level)(
             "%s.sync completed\n  Returncode = %i.\n  Command = %s\n"
-            "  subprocess kwargs = %s\n",
+            "  subprocess kwargs = %s",
             self.__class__.__name__,
             result.returncode,
             str(subprocess_args),
